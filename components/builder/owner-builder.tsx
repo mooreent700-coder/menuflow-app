@@ -21,8 +21,10 @@ export function OwnerBuilder({ client }: { client: string }) {
   const [itemPrice, setItemPrice] = useState('');
   const [itemCategory, setItemCategory] = useState<MenuItem['category']>('Plates');
   const [itemImage, setItemImage] = useState('https://images.unsplash.com/photo-1515003197210-e0cd71810b5f?auto=format&fit=crop&w=900&q=80');
-  const storefrontLink = useMemo(() => `/store/${data.slug}`, [data.slug]);
-
+  const storefrontLink = useMemo(() => {
+  if (typeof window === 'undefined') return `/store/${data.slug}`;
+  return `${window.location.origin}/store/${data.slug}`;
+}, [data.slug]);
   const updateField = (field: keyof RestaurantData, value: string) => {
     setData((current) => ({ ...current, [field]: value }));
   };
