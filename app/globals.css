@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html, body {
+  background: #0b0b0d;
+  color: #f5f5f5;
+}
+
+body {
+  min-height: 100vh;
+}
+
+input, textarea, select {
+  color: #111;
+}
+
+.builder-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 1.1fr) minmax(320px, .9fr);
+  gap: 1.5rem;
+}
+
+@media (max-width: 1024px) {
+  .builder-grid {
+    grid-template-columns: 1fr;
+  }
+}
