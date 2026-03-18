@@ -29,3 +29,4 @@ This source is designed to be the foundation for the real app:
 - `/auth/signup`
 - `/dashboard/owner/builder?client=cultured-soul-kitchen`
 - `/store/cultured-soul-kitchen`
+update
