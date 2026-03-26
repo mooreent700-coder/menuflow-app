@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, type CSSProperties } from 'react';
+import { useState } from 'react';
 
 type Lang = 'en' | 'es';
 
@@ -190,7 +190,7 @@ const content = {
       'Solo ingresa tu información y deja que MenuFlow genere la tienda por ti.',
     getStartedFree: 'Empieza Gratis',
   },
-};
+} as const;
 
 const lifestyleImages = [
   'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80',
@@ -203,124 +203,124 @@ export default function HomePage() {
   const t = content[lang];
 
   return (
-    <main style={styles.page}>
-      <header style={styles.header}>
-        <div style={styles.headerInner}>
-          <Link href="/" style={styles.logoWrap}>
-            <div style={styles.logoMark}>M</div>
-            <div style={styles.logoText}>MenuFlow</div>
+    <main className="page">
+      <header className="header">
+        <div className="headerInner">
+          <Link href="/" className="logoWrap">
+            <div className="logoMark">M</div>
+            <div className="logoText">MenuFlow</div>
           </Link>
 
-          <nav style={styles.headerNav}>
-            <a href="#how" style={styles.navLink}>
+          <nav className="headerNav">
+            <a href="#how" className="navLink">
               {t.navHow}
             </a>
-            <a href="#pricing" style={styles.navLink}>
+            <a href="#pricing" className="navLink">
               {t.navPricing}
             </a>
 
-            <div style={styles.langWrap}>
+            <div className="langWrap">
               <button
                 type="button"
                 onClick={() => setLang('en')}
-                style={lang === 'en' ? styles.langButtonActive : styles.langButton}
+                className={lang === 'en' ? 'langButton active' : 'langButton'}
               >
                 EN
               </button>
               <button
                 type="button"
                 onClick={() => setLang('es')}
-                style={lang === 'es' ? styles.langButtonActive : styles.langButton}
+                className={lang === 'es' ? 'langButton active' : 'langButton'}
               >
                 ES
               </button>
             </div>
 
-            <Link href="/auth/signup" style={styles.navButtonSecondary}>
+            <Link href="/auth/signup" className="navButtonSecondary">
               {t.navCreate}
             </Link>
           </nav>
         </div>
       </header>
 
-      <section style={styles.heroSection}>
-        <div style={styles.heroInner}>
-          <div style={styles.heroCopy}>
-            <div style={styles.pill}>{t.pill}</div>
+      <section className="heroSection">
+        <div className="heroInner">
+          <div className="heroCopy">
+            <div className="pill">{t.pill}</div>
 
-            <h1 style={styles.heroTitle}>{t.heroTitle}</h1>
+            <h1 className="heroTitle">{t.heroTitle}</h1>
 
-            <p style={styles.heroText}>{t.heroText}</p>
+            <p className="heroText">{t.heroText}</p>
 
-            <div style={styles.heroButtons}>
-              <Link href="/auth/signup?plan=starter" style={styles.primaryButton}>
+            <div className="heroButtons">
+              <Link href="/auth/signup?plan=starter" className="primaryButton">
                 {t.startFree}
               </Link>
-              <a href="#how" style={styles.secondaryButton}>
+              <a href="#how" className="secondaryButton">
                 {t.seeHow}
               </a>
             </div>
 
-            <div style={styles.heroMeta}>
-              <span style={styles.metaItem}>{t.meta1}</span>
-              <span style={styles.metaItem}>{t.meta2}</span>
-              <span style={styles.metaItem}>{t.meta3}</span>
+            <div className="heroMeta">
+              <span className="metaItem">{t.meta1}</span>
+              <span className="metaItem">{t.meta2}</span>
+              <span className="metaItem">{t.meta3}</span>
             </div>
           </div>
 
-          <div style={styles.heroVisual}>
+          <div className="heroVisual">
             <img
               src="https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=1600&q=80"
               alt="Restaurant team serving food"
-              style={styles.heroImage}
+              className="heroImage"
             />
           </div>
         </div>
       </section>
 
-      <section style={styles.socialSection}>
-        <div style={styles.container}>
-          <div style={styles.sectionTop}>
-            <div style={styles.eyebrow}>{t.socialEyebrow}</div>
-            <h2 style={styles.sectionTitle}>{t.socialTitle}</h2>
-            <p style={styles.sectionText}>{t.socialText}</p>
+      <section className="socialSection">
+        <div className="container">
+          <div className="sectionTop">
+            <div className="eyebrow">{t.socialEyebrow}</div>
+            <h2 className="sectionTitle">{t.socialTitle}</h2>
+            <p className="sectionText">{t.socialText}</p>
           </div>
 
-          <div style={styles.socialGrid}>
-            <div style={styles.socialCardLarge}>
+          <div className="socialGrid">
+            <div className="socialCardLarge">
               <img
                 src="https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=1600&q=80"
                 alt="Chef plating food in a restaurant kitchen"
-                style={styles.cardImage}
+                className="cardImage"
               />
-              <div style={styles.cardBody}>
-                <h3 style={styles.cardTitle}>{t.serviceTitle}</h3>
-                <p style={styles.cardText}>{t.serviceText}</p>
+              <div className="cardBody">
+                <h3 className="cardTitle">{t.serviceTitle}</h3>
+                <p className="cardText">{t.serviceText}</p>
               </div>
             </div>
 
-            <div style={styles.socialStack}>
-              <div style={styles.socialCardSmall}>
+            <div className="socialStack">
+              <div className="socialCardSmall">
                 <img
                   src="https://images.unsplash.com/photo-1528605248644-14dd04022da1?auto=format&fit=crop&w=1200&q=80"
                   alt="Customer smiling with food"
-                  style={styles.cardImage}
+                  className="cardImage"
                 />
-                <div style={styles.cardBody}>
-                  <h3 style={styles.cardTitle}>{t.convertTitle}</h3>
-                  <p style={styles.cardText}>{t.convertText}</p>
+                <div className="cardBody">
+                  <h3 className="cardTitle">{t.convertTitle}</h3>
+                  <p className="cardText">{t.convertText}</p>
                 </div>
               </div>
 
-              <div style={styles.socialCardSmall}>
+              <div className="socialCardSmall">
                 <img
                   src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&q=80"
                   alt="Premium food table spread"
-                  style={styles.cardImage}
+                  className="cardImage"
                 />
-                <div style={styles.cardBody}>
-                  <h3 style={styles.cardTitle}>{t.premiumTitle}</h3>
-                  <p style={styles.cardText}>{t.premiumText}</p>
+                <div className="cardBody">
+                  <h3 className="cardTitle">{t.premiumTitle}</h3>
+                  <p className="cardText">{t.premiumText}</p>
                 </div>
               </div>
             </div>
@@ -328,78 +328,78 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section id="how" style={styles.howSection}>
-        <div style={styles.container}>
-          <div style={styles.sectionTop}>
-            <div style={styles.eyebrow}>{t.howEyebrow}</div>
-            <h2 style={styles.sectionTitle}>{t.howTitle}</h2>
+      <section id="how" className="howSection">
+        <div className="container">
+          <div className="sectionTop">
+            <div className="eyebrow">{t.howEyebrow}</div>
+            <h2 className="sectionTitle">{t.howTitle}</h2>
           </div>
 
-          <div style={styles.stepGrid}>
+          <div className="stepGrid">
             {t.sections.map((item, index) => (
-              <div key={item.title} style={styles.stepCard}>
-                <div style={styles.stepNumber}>{index + 1}</div>
-                <h3 style={styles.stepTitle}>{item.title}</h3>
-                <p style={styles.stepText}>{item.text}</p>
+              <div key={item.title} className="stepCard">
+                <div className="stepNumber">{index + 1}</div>
+                <h3 className="stepTitle">{item.title}</h3>
+                <p className="stepText">{item.text}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section style={styles.productSection}>
-        <div style={styles.containerWide}>
-          <div style={styles.productGrid}>
-            <div style={styles.productCopy}>
-              <div style={styles.eyebrow}>{t.productEyebrow}</div>
-              <h2 style={styles.sectionTitle}>{t.productTitle}</h2>
-              <p style={styles.sectionTextLeft}>{t.productText}</p>
+      <section className="productSection">
+        <div className="containerWide">
+          <div className="productGrid">
+            <div className="productCopy">
+              <div className="eyebrow">{t.productEyebrow}</div>
+              <h2 className="sectionTitle">{t.productTitle}</h2>
+              <p className="sectionTextLeft">{t.productText}</p>
 
-              <div style={styles.benefitGrid}>
+              <div className="benefitGrid">
                 {t.benefits.map((benefit) => (
-                  <div key={benefit} style={styles.benefitItem}>
-                    <span style={styles.benefitDot} />
+                  <div key={benefit} className="benefitItem">
+                    <span className="benefitDot" />
                     <span>{benefit}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div style={styles.productVisualWrap}>
-              <div style={styles.productVisualMain}>
+            <div className="productVisualWrap">
+              <div className="productVisualMain">
                 <img
                   src="https://images.unsplash.com/photo-1515003197210-e0cd71810b5f?auto=format&fit=crop&w=1400&q=80"
                   alt="Person ordering food on a phone"
-                  style={styles.productImage}
+                  className="productImage"
                 />
               </div>
-              <div style={styles.productVisualCard}>
+              <div className="productVisualCard">
                 <img
                   src="https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=1200&q=80"
                   alt="Pizza and restaurant table"
-                  style={styles.productImageSmall}
+                  className="productImageSmall"
                 />
-                <div style={styles.productCardText}>{t.productCardText}</div>
+                <div className="productCardText">{t.productCardText}</div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section style={styles.lifestyleSection}>
-        <div style={styles.container}>
-          <div style={styles.sectionTop}>
-            <div style={styles.eyebrow}>{t.lifestyleEyebrow}</div>
-            <h2 style={styles.sectionTitle}>{t.lifestyleTitle}</h2>
+      <section className="lifestyleSection">
+        <div className="container">
+          <div className="sectionTop">
+            <div className="eyebrow">{t.lifestyleEyebrow}</div>
+            <h2 className="sectionTitle">{t.lifestyleTitle}</h2>
           </div>
 
-          <div style={styles.lifeGrid}>
+          <div className="lifeGrid">
             {t.lifestyle.map((item, index) => (
-              <div key={item.title} style={styles.lifeCard}>
-                <img src={lifestyleImages[index]} alt={item.title} style={styles.lifeImage} />
-                <div style={styles.lifeBody}>
-                  <h3 style={styles.cardTitle}>{item.title}</h3>
-                  <p style={styles.cardText}>{item.text}</p>
+              <div key={item.title} className="lifeCard">
+                <img src={lifestyleImages[index]} alt={item.title} className="lifeImage" />
+                <div className="lifeBody">
+                  <h3 className="cardTitle">{item.title}</h3>
+                  <p className="cardText">{item.text}</p>
                 </div>
               </div>
             ))}
@@ -407,44 +407,44 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section id="pricing" style={styles.pricingSection}>
-        <div style={styles.container}>
-          <div style={styles.sectionTop}>
-            <div style={styles.eyebrow}>{t.pricingEyebrow}</div>
-            <h2 style={styles.sectionTitle}>{t.pricingTitle}</h2>
+      <section id="pricing" className="pricingSection">
+        <div className="container">
+          <div className="sectionTop">
+            <div className="eyebrow">{t.pricingEyebrow}</div>
+            <h2 className="sectionTitle">{t.pricingTitle}</h2>
           </div>
 
-          <div style={styles.pricingGrid}>
-            <div style={styles.pricingCard}>
+          <div className="pricingGrid">
+            <div className="pricingCard">
               <div>
-                <div style={styles.planName}>{t.starter}</div>
-                <div style={styles.planPrice}>{t.starterPrice}</div>
-                <div style={styles.planFee}>{t.starterFee}</div>
+                <div className="planName">{t.starter}</div>
+                <div className="planPrice">{t.starterPrice}</div>
+                <div className="planFee">{t.starterFee}</div>
               </div>
-              <Link href="/auth/signup?plan=starter" style={styles.planButton}>
+              <Link href="/auth/signup?plan=starter" className="planButton">
                 {t.startFree}
               </Link>
             </div>
 
-            <div style={styles.pricingCardFeatured}>
+            <div className="pricingCardFeatured">
               <div>
-                <div style={styles.badge}>{t.mostPopular}</div>
-                <div style={styles.planNameFeatured}>{t.growth}</div>
-                <div style={styles.planPriceFeatured}>{t.growthPrice}</div>
-                <div style={styles.planFeeFeatured}>{t.growthFee}</div>
+                <div className="badge">{t.mostPopular}</div>
+                <div className="planNameFeatured">{t.growth}</div>
+                <div className="planPriceFeatured">{t.growthPrice}</div>
+                <div className="planFeeFeatured">{t.growthFee}</div>
               </div>
-              <Link href="/auth/checkout?plan=growth" style={styles.planButtonFeatured}>
+              <Link href="/auth/checkout?plan=growth" className="planButtonFeatured">
                 {t.chooseGrowth}
               </Link>
             </div>
 
-            <div style={styles.pricingCard}>
+            <div className="pricingCard">
               <div>
-                <div style={styles.planName}>{t.premium}</div>
-                <div style={styles.planPrice}>{t.premiumPrice}</div>
-                <div style={styles.planFee}>{t.premiumFee}</div>
+                <div className="planName">{t.premium}</div>
+                <div className="planPrice">{t.premiumPrice}</div>
+                <div className="planFee">{t.premiumFee}</div>
               </div>
-              <Link href="/auth/checkout?plan=premium" style={styles.planButton}>
+              <Link href="/auth/checkout?plan=premium" className="planButton">
                 {t.goPremium}
               </Link>
             </div>
@@ -452,595 +452,800 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section style={styles.ctaSection}>
-        <div style={styles.container}>
-          <div style={styles.ctaCard}>
-            <h2 style={styles.ctaTitle}>{t.ctaTitle}</h2>
-            <p style={styles.ctaText}>{t.ctaText}</p>
-            <div style={styles.ctaButtons}>
-              <Link href="/auth/signup?plan=starter" style={styles.primaryButton}>
+      <section className="ctaSection">
+        <div className="container">
+          <div className="ctaCard">
+            <h2 className="ctaTitle">{t.ctaTitle}</h2>
+            <p className="ctaText">{t.ctaText}</p>
+            <div className="ctaButtons">
+              <Link href="/auth/signup?plan=starter" className="primaryButton">
                 {t.getStartedFree}
               </Link>
-              <Link href="/auth/checkout?plan=premium" style={styles.secondaryButtonLight}>
+              <Link href="/auth/checkout?plan=premium" className="secondaryButtonLight">
                 {t.goPremium}
               </Link>
             </div>
           </div>
         </div>
       </section>
+
+      <style jsx>{`
+        .page {
+          background: #f8fbff;
+          color: #0f172a;
+          min-height: 100vh;
+          overflow-x: hidden;
+        }
+
+        .header {
+          position: sticky;
+          top: 0;
+          z-index: 40;
+          backdrop-filter: blur(14px);
+          background: rgba(248, 251, 255, 0.88);
+          border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+        }
+
+        .headerInner {
+          max-width: 1280px;
+          margin: 0 auto;
+          padding: 14px 20px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+        }
+
+        .logoWrap {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          text-decoration: none;
+          color: #0f172a;
+          min-width: 0;
+        }
+
+        .logoMark {
+          width: 42px;
+          height: 42px;
+          border-radius: 14px;
+          background: #2563eb;
+          color: #fff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 800;
+          font-size: 20px;
+          box-shadow: 0 14px 30px rgba(37, 99, 235, 0.28);
+          flex-shrink: 0;
+        }
+
+        .logoText {
+          font-size: 22px;
+          font-weight: 800;
+          line-height: 1;
+          white-space: nowrap;
+        }
+
+        .headerNav {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+        }
+
+        .navLink {
+          color: #334155;
+          text-decoration: none;
+          font-weight: 600;
+          white-space: nowrap;
+        }
+
+        .navButtonSecondary {
+          text-decoration: none;
+          color: #2563eb;
+          border: 1px solid rgba(37, 99, 235, 0.22);
+          background: #eff6ff;
+          padding: 10px 16px;
+          border-radius: 14px;
+          font-weight: 700;
+          white-space: nowrap;
+        }
+
+        .langWrap {
+          display: flex;
+          background: #eff6ff;
+          border: 1px solid #bfdbfe;
+          padding: 4px;
+          border-radius: 14px;
+        }
+
+        .langButton {
+          border: none;
+          background: transparent;
+          color: #64748b;
+          padding: 8px 12px;
+          border-radius: 10px;
+          font-weight: 800;
+          cursor: pointer;
+        }
+
+        .langButton.active {
+          background: #2563eb;
+          color: #fff;
+        }
+
+        .heroSection {
+          padding: 32px 20px 24px;
+        }
+
+        .heroInner {
+          max-width: 1280px;
+          margin: 0 auto;
+          display: grid;
+          grid-template-columns: minmax(0, 1fr);
+          gap: 20px;
+          align-items: center;
+        }
+
+        .heroCopy {
+          min-width: 0;
+        }
+
+        .pill {
+          display: inline-flex;
+          padding: 10px 16px;
+          border-radius: 999px;
+          background: #eff6ff;
+          color: #2563eb;
+          border: 1px solid rgba(37, 99, 235, 0.18);
+          font-weight: 700;
+          font-size: 14px;
+        }
+
+        .heroTitle {
+          font-size: clamp(40px, 11vw, 76px);
+          line-height: 0.98;
+          margin: 18px 0 0;
+          font-weight: 900;
+          letter-spacing: -0.05em;
+          color: #0f172a;
+          max-width: 900px;
+        }
+
+        .heroText {
+          margin-top: 18px;
+          max-width: 700px;
+          font-size: 17px;
+          line-height: 1.75;
+          color: #475569;
+        }
+
+        .heroButtons {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+          margin-top: 24px;
+        }
+
+        .primaryButton,
+        .secondaryButton,
+        .secondaryButtonLight,
+        .planButton,
+        .planButtonFeatured {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          text-decoration: none;
+          border-radius: 18px;
+          font-weight: 800;
+          text-align: center;
+        }
+
+        .primaryButton {
+          background: #2563eb;
+          color: #fff;
+          padding: 16px 22px;
+          box-shadow: 0 18px 34px rgba(37, 99, 235, 0.24);
+        }
+
+        .secondaryButton {
+          background: #ffffff;
+          color: #0f172a;
+          padding: 16px 22px;
+          border: 1px solid rgba(15, 23, 42, 0.08);
+        }
+
+        .secondaryButtonLight {
+          background: #eff6ff;
+          color: #2563eb;
+          padding: 16px 22px;
+          border: 1px solid rgba(37, 99, 235, 0.15);
+        }
+
+        .heroMeta {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          margin-top: 22px;
+        }
+
+        .metaItem {
+          background: #ffffff;
+          color: #334155;
+          border: 1px solid rgba(15, 23, 42, 0.07);
+          padding: 10px 14px;
+          border-radius: 999px;
+          font-size: 14px;
+          font-weight: 600;
+        }
+
+        .heroVisual {
+          min-width: 0;
+        }
+
+        .heroImage {
+          width: 100%;
+          height: 360px;
+          object-fit: cover;
+          border-radius: 28px;
+          box-shadow: 0 24px 60px rgba(15, 23, 42, 0.14);
+          display: block;
+        }
+
+        .container,
+        .containerWide {
+          max-width: 1180px;
+          margin: 0 auto;
+          padding: 0 20px;
+        }
+
+        .containerWide {
+          max-width: 1280px;
+        }
+
+        .sectionTop {
+          max-width: 760px;
+          margin-bottom: 24px;
+        }
+
+        .eyebrow {
+          color: #2563eb;
+          font-size: 13px;
+          font-weight: 800;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+        }
+
+        .sectionTitle {
+          font-size: clamp(32px, 8vw, 48px);
+          line-height: 1.06;
+          margin: 12px 0 0;
+          font-weight: 900;
+          letter-spacing: -0.04em;
+          color: #0f172a;
+        }
+
+        .sectionText,
+        .sectionTextLeft,
+        .ctaText {
+          margin-top: 14px;
+          color: #475569;
+          font-size: 17px;
+          line-height: 1.8;
+        }
+
+        .sectionTextLeft {
+          max-width: 650px;
+        }
+
+        .socialSection,
+        .howSection,
+        .productSection,
+        .lifestyleSection,
+        .pricingSection {
+          padding: 34px 0 12px;
+        }
+
+        .ctaSection {
+          padding: 34px 0 70px;
+        }
+
+        .socialGrid,
+        .stepGrid,
+        .productGrid,
+        .lifeGrid,
+        .pricingGrid {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr);
+          gap: 18px;
+        }
+
+        .socialStack,
+        .productVisualWrap {
+          display: grid;
+          gap: 18px;
+        }
+
+        .socialCardLarge,
+        .socialCardSmall,
+        .stepCard,
+        .lifeCard,
+        .pricingCard,
+        .pricingCardFeatured,
+        .productVisualMain,
+        .productVisualCard,
+        .ctaCard {
+          background: #ffffff;
+          border: 1px solid rgba(15, 23, 42, 0.06);
+          box-shadow: 0 18px 44px rgba(15, 23, 42, 0.08);
+        }
+
+        .socialCardLarge,
+        .socialCardSmall,
+        .lifeCard {
+          border-radius: 28px;
+          overflow: hidden;
+        }
+
+        .stepCard {
+          border-radius: 26px;
+          padding: 22px;
+        }
+
+        .productVisualMain {
+          padding: 12px;
+          border-radius: 28px;
+        }
+
+        .productVisualCard {
+          padding: 12px;
+          border-radius: 24px;
+          align-items: center;
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .cardImage {
+          width: 100%;
+          height: 240px;
+          object-fit: cover;
+          display: block;
+        }
+
+        .cardBody,
+        .lifeBody {
+          padding: 22px;
+        }
+
+        .cardTitle {
+          margin: 0;
+          font-size: 22px;
+          line-height: 1.2;
+          font-weight: 800;
+          color: #0f172a;
+        }
+
+        .cardText {
+          margin-top: 10px;
+          color: #475569;
+          line-height: 1.75;
+          font-size: 15px;
+        }
+
+        .stepNumber {
+          width: 48px;
+          height: 48px;
+          border-radius: 999px;
+          background: #2563eb;
+          color: #fff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 900;
+          font-size: 18px;
+        }
+
+        .stepTitle {
+          margin: 16px 0 0;
+          font-size: 22px;
+          font-weight: 800;
+          color: #0f172a;
+        }
+
+        .stepText {
+          margin-top: 10px;
+          color: #475569;
+          line-height: 1.75;
+          font-size: 15px;
+        }
+
+        .benefitGrid {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr);
+          gap: 12px;
+          margin-top: 24px;
+        }
+
+        .benefitItem {
+          background: #ffffff;
+          border-radius: 16px;
+          border: 1px solid rgba(15, 23, 42, 0.06);
+          padding: 14px 16px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          color: #334155;
+          font-weight: 600;
+          box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+          min-width: 0;
+        }
+
+        .benefitDot {
+          width: 10px;
+          height: 10px;
+          border-radius: 999px;
+          background: #2563eb;
+          flex-shrink: 0;
+        }
+
+        .productImage {
+          width: 100%;
+          height: 320px;
+          object-fit: cover;
+          border-radius: 20px;
+          display: block;
+        }
+
+        .productImageSmall {
+          width: 100%;
+          height: 180px;
+          object-fit: cover;
+          border-radius: 16px;
+          display: block;
+        }
+
+        .productCardText {
+          color: #334155;
+          line-height: 1.75;
+          font-weight: 600;
+        }
+
+        .lifeImage {
+          width: 100%;
+          height: 240px;
+          object-fit: cover;
+          display: block;
+        }
+
+        .pricingCard,
+        .pricingCardFeatured {
+          border-radius: 28px;
+          padding: 28px 22px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          min-height: 0;
+        }
+
+        .pricingCardFeatured {
+          background: #2563eb;
+          color: #ffffff;
+          box-shadow: 0 28px 60px rgba(37, 99, 235, 0.3);
+        }
+
+        .badge {
+          display: inline-flex;
+          width: fit-content;
+          background: rgba(255, 255, 255, 0.18);
+          border: 1px solid rgba(255, 255, 255, 0.24);
+          color: #ffffff;
+          padding: 8px 12px;
+          border-radius: 999px;
+          font-weight: 800;
+          font-size: 12px;
+          text-transform: uppercase;
+          letter-spacing: 0.12em;
+        }
+
+        .planName,
+        .planNameFeatured {
+          margin-top: 12px;
+          font-size: 24px;
+          font-weight: 800;
+          line-height: 1.2;
+        }
+
+        .planName {
+          color: #0f172a;
+        }
+
+        .planNameFeatured {
+          color: #ffffff;
+        }
+
+        .planPrice,
+        .planPriceFeatured {
+          margin-top: 10px;
+          font-size: clamp(40px, 11vw, 52px);
+          font-weight: 900;
+          line-height: 1;
+        }
+
+        .planPrice {
+          color: #0f172a;
+        }
+
+        .planPriceFeatured {
+          color: #ffffff;
+        }
+
+        .planFee,
+        .planFeeFeatured {
+          margin-top: 16px;
+          font-weight: 700;
+          font-size: 17px;
+          line-height: 1.6;
+        }
+
+        .planFee {
+          color: #334155;
+        }
+
+        .planFeeFeatured {
+          color: #ffffff;
+        }
+
+        .planButton,
+        .planButtonFeatured {
+          padding: 14px 18px;
+          margin-top: 24px;
+          width: 100%;
+          border-radius: 16px;
+        }
+
+        .planButton {
+          background: #2563eb;
+          color: #ffffff;
+        }
+
+        .planButtonFeatured {
+          background: #ffffff;
+          color: #2563eb;
+        }
+
+        .ctaCard {
+          background: linear-gradient(180deg, #ffffff 0%, #eef5ff 100%);
+          border-radius: 32px;
+          border: 1px solid rgba(37, 99, 235, 0.1);
+          box-shadow: 0 24px 60px rgba(15, 23, 42, 0.1);
+          padding: 34px 22px;
+          text-align: center;
+        }
+
+        .ctaTitle {
+          margin: 0;
+          font-size: clamp(32px, 8vw, 48px);
+          line-height: 1.08;
+          font-weight: 900;
+          letter-spacing: -0.04em;
+          color: #0f172a;
+        }
+
+        .ctaButtons {
+          display: flex;
+          gap: 14px;
+          justify-content: center;
+          flex-wrap: wrap;
+          margin-top: 26px;
+        }
+
+        @media (max-width: 1023px) {
+          .headerInner {
+            align-items: flex-start;
+            flex-direction: column;
+          }
+
+          .headerNav {
+            width: 100%;
+            justify-content: flex-start;
+          }
+        }
+
+        @media (max-width: 767px) {
+          .header {
+            position: static;
+          }
+
+          .headerInner {
+            padding: 16px 16px 18px;
+          }
+
+          .logoMark {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            font-size: 18px;
+          }
+
+          .logoText {
+            font-size: 18px;
+          }
+
+          .headerNav {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            width: 100%;
+          }
+
+          .navLink {
+            display: inline-flex;
+            align-items: center;
+            min-height: 44px;
+          }
+
+          .langWrap {
+            width: 100%;
+            grid-column: 1 / -1;
+            justify-content: stretch;
+          }
+
+          .langButton {
+            flex: 1;
+            min-height: 44px;
+          }
+
+          .navButtonSecondary {
+            grid-column: 1 / -1;
+            width: 100%;
+            justify-content: center;
+            display: inline-flex;
+            min-height: 48px;
+          }
+
+          .heroSection {
+            padding: 22px 16px 18px;
+          }
+
+          .heroTitle {
+            font-size: clamp(34px, 12vw, 52px);
+            line-height: 0.98;
+          }
+
+          .heroText,
+          .sectionText,
+          .sectionTextLeft,
+          .ctaText {
+            font-size: 16px;
+            line-height: 1.7;
+          }
+
+          .heroButtons {
+            flex-direction: column;
+          }
+
+          .heroButtons a {
+            width: 100%;
+          }
+
+          .heroImage {
+            height: 300px;
+            border-radius: 24px;
+          }
+
+          .container,
+          .containerWide {
+            padding: 0 16px;
+          }
+
+          .cardImage {
+            height: 220px;
+          }
+
+          .productImage {
+            height: 280px;
+          }
+
+          .productImageSmall {
+            height: 160px;
+          }
+
+          .lifeImage {
+            height: 220px;
+          }
+
+          .stepCard,
+          .pricingCard,
+          .pricingCardFeatured,
+          .ctaCard {
+            padding: 22px 18px;
+          }
+
+          .planName,
+          .planNameFeatured {
+            font-size: 22px;
+          }
+
+          .planPrice,
+          .planPriceFeatured {
+            font-size: clamp(36px, 11vw, 46px);
+          }
+
+          .ctaButtons {
+            flex-direction: column;
+          }
+
+          .ctaButtons a {
+            width: 100%;
+          }
+        }
+
+        @media (min-width: 768px) {
+          .heroSection {
+            padding: 42px 20px 26px;
+          }
+
+          .heroInner {
+            grid-template-columns: minmax(0, 1fr);
+          }
+
+          .productVisualCard {
+            grid-template-columns: 180px minmax(0, 1fr);
+          }
+
+          .benefitGrid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .stepGrid,
+          .lifeGrid,
+          .pricingGrid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .socialGrid {
+            grid-template-columns: minmax(0, 1fr);
+          }
+        }
+
+        @media (min-width: 1100px) {
+          .heroInner {
+            grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+            gap: 28px;
+          }
+
+          .heroCopy {
+            padding-right: 8px;
+          }
+
+          .heroImage {
+            height: 520px;
+          }
+
+          .socialGrid {
+            grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+          }
+
+          .stepGrid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+          }
+
+          .productGrid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 22px;
+          }
+
+          .lifeGrid,
+          .pricingGrid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+          }
+
+          .productCopy {
+            padding-right: 10px;
+          }
+        }
+      `}</style>
     </main>
   );
 }
-
-const styles: Record<string, CSSProperties> = {
-  page: {
-    background: '#f8fbff',
-    color: '#0f172a',
-    minHeight: '100vh',
-  },
-  header: {
-    position: 'sticky',
-    top: 0,
-    zIndex: 40,
-    backdropFilter: 'blur(14px)',
-    background: 'rgba(248,251,255,0.88)',
-    borderBottom: '1px solid rgba(15,23,42,0.08)',
-  },
-  headerInner: {
-    maxWidth: '1280px',
-    margin: '0 auto',
-    padding: '14px 20px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: '16px',
-  },
-  logoWrap: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    textDecoration: 'none',
-    color: '#0f172a',
-  },
-  logoMark: {
-    width: '42px',
-    height: '42px',
-    borderRadius: '14px',
-    background: '#2563eb',
-    color: '#fff',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontWeight: 800,
-    fontSize: '20px',
-    boxShadow: '0 14px 30px rgba(37,99,235,0.28)',
-  },
-  logoText: {
-    fontSize: '22px',
-    fontWeight: 800,
-  },
-  headerNav: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '14px',
-    flexWrap: 'wrap',
-  },
-  navLink: {
-    color: '#334155',
-    textDecoration: 'none',
-    fontWeight: 600,
-  },
-  navButtonSecondary: {
-    textDecoration: 'none',
-    color: '#2563eb',
-    border: '1px solid rgba(37,99,235,0.22)',
-    background: '#eff6ff',
-    padding: '10px 16px',
-    borderRadius: '14px',
-    fontWeight: 700,
-  },
-  langWrap: {
-    display: 'flex',
-    background: '#eff6ff',
-    border: '1px solid #bfdbfe',
-    padding: '4px',
-    borderRadius: '14px',
-  },
-  langButton: {
-    border: 'none',
-    background: 'transparent',
-    color: '#64748b',
-    padding: '8px 12px',
-    borderRadius: '10px',
-    fontWeight: 800,
-    cursor: 'pointer',
-  },
-  langButtonActive: {
-    border: 'none',
-    background: '#2563eb',
-    color: '#fff',
-    padding: '8px 12px',
-    borderRadius: '10px',
-    fontWeight: 800,
-    cursor: 'pointer',
-  },
-  heroSection: {
-    padding: '48px 20px 28px',
-  },
-  heroInner: {
-    maxWidth: '1280px',
-    margin: '0 auto',
-    display: 'grid',
-    gridTemplateColumns: '1.05fr 1fr',
-    gap: '28px',
-    alignItems: 'center',
-  },
-  heroCopy: {
-    paddingRight: '8px',
-  },
-  pill: {
-    display: 'inline-flex',
-    padding: '10px 16px',
-    borderRadius: '999px',
-    background: '#eff6ff',
-    color: '#2563eb',
-    border: '1px solid rgba(37,99,235,0.18)',
-    fontWeight: 700,
-    fontSize: '14px',
-  },
-  heroTitle: {
-    fontSize: 'clamp(44px, 7vw, 76px)',
-    lineHeight: 1.02,
-    margin: '18px 0 0',
-    fontWeight: 900,
-    letterSpacing: '-0.05em',
-    color: '#0f172a',
-  },
-  heroText: {
-    marginTop: '18px',
-    maxWidth: '700px',
-    fontSize: '18px',
-    lineHeight: 1.8,
-    color: '#475569',
-  },
-  heroButtons: {
-    display: 'flex',
-    gap: '14px',
-    flexWrap: 'wrap',
-    marginTop: '28px',
-  },
-  primaryButton: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    textDecoration: 'none',
-    background: '#2563eb',
-    color: '#fff',
-    padding: '16px 22px',
-    borderRadius: '18px',
-    fontWeight: 800,
-    boxShadow: '0 18px 34px rgba(37,99,235,0.24)',
-  },
-  secondaryButton: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    textDecoration: 'none',
-    background: '#ffffff',
-    color: '#0f172a',
-    padding: '16px 22px',
-    borderRadius: '18px',
-    fontWeight: 800,
-    border: '1px solid rgba(15,23,42,0.08)',
-  },
-  secondaryButtonLight: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    textDecoration: 'none',
-    background: '#eff6ff',
-    color: '#2563eb',
-    padding: '16px 22px',
-    borderRadius: '18px',
-    fontWeight: 800,
-    border: '1px solid rgba(37,99,235,0.15)',
-  },
-  heroMeta: {
-    display: 'flex',
-    gap: '10px',
-    flexWrap: 'wrap',
-    marginTop: '24px',
-  },
-  metaItem: {
-    background: '#ffffff',
-    color: '#334155',
-    border: '1px solid rgba(15,23,42,0.07)',
-    padding: '10px 14px',
-    borderRadius: '999px',
-    fontSize: '14px',
-    fontWeight: 600,
-  },
-  heroVisual: {
-    minHeight: '520px',
-  },
-  heroImage: {
-    width: '100%',
-    height: '100%',
-    minHeight: '520px',
-    objectFit: 'cover',
-    borderRadius: '32px',
-    boxShadow: '0 24px 60px rgba(15,23,42,0.14)',
-  },
-  container: {
-    maxWidth: '1180px',
-    margin: '0 auto',
-    padding: '0 20px',
-  },
-  containerWide: {
-    maxWidth: '1280px',
-    margin: '0 auto',
-    padding: '0 20px',
-  },
-  sectionTop: {
-    maxWidth: '760px',
-    marginBottom: '28px',
-  },
-  eyebrow: {
-    color: '#2563eb',
-    fontSize: '13px',
-    fontWeight: 800,
-    letterSpacing: '0.16em',
-    textTransform: 'uppercase',
-  },
-  sectionTitle: {
-    fontSize: 'clamp(30px, 5vw, 48px)',
-    lineHeight: 1.08,
-    margin: '12px 0 0',
-    fontWeight: 900,
-    letterSpacing: '-0.04em',
-    color: '#0f172a',
-  },
-  sectionText: {
-    marginTop: '14px',
-    color: '#475569',
-    fontSize: '17px',
-    lineHeight: 1.8,
-  },
-  sectionTextLeft: {
-    marginTop: '16px',
-    color: '#475569',
-    fontSize: '17px',
-    lineHeight: 1.8,
-    maxWidth: '650px',
-  },
-  socialSection: {
-    padding: '34px 0 20px',
-  },
-  socialGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1.2fr 0.8fr',
-    gap: '18px',
-  },
-  socialCardLarge: {
-    background: '#ffffff',
-    borderRadius: '30px',
-    overflow: 'hidden',
-    boxShadow: '0 18px 44px rgba(15,23,42,0.08)',
-    border: '1px solid rgba(15,23,42,0.06)',
-  },
-  socialStack: {
-    display: 'grid',
-    gap: '18px',
-  },
-  socialCardSmall: {
-    background: '#ffffff',
-    borderRadius: '30px',
-    overflow: 'hidden',
-    boxShadow: '0 18px 44px rgba(15,23,42,0.08)',
-    border: '1px solid rgba(15,23,42,0.06)',
-  },
-  cardImage: {
-    width: '100%',
-    height: '280px',
-    objectFit: 'cover',
-    display: 'block',
-  },
-  cardBody: {
-    padding: '22px',
-  },
-  cardTitle: {
-    margin: 0,
-    fontSize: '22px',
-    lineHeight: 1.2,
-    fontWeight: 800,
-    color: '#0f172a',
-  },
-  cardText: {
-    marginTop: '10px',
-    color: '#475569',
-    lineHeight: 1.75,
-    fontSize: '15px',
-  },
-  howSection: {
-    padding: '46px 0 10px',
-  },
-  stepGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '18px',
-  },
-  stepCard: {
-    background: '#ffffff',
-    border: '1px solid rgba(15,23,42,0.06)',
-    borderRadius: '28px',
-    padding: '24px',
-    boxShadow: '0 18px 44px rgba(15,23,42,0.08)',
-  },
-  stepNumber: {
-    width: '44px',
-    height: '44px',
-    borderRadius: '999px',
-    background: '#2563eb',
-    color: '#fff',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontWeight: 900,
-    fontSize: '18px',
-  },
-  stepTitle: {
-    margin: '16px 0 0',
-    fontSize: '22px',
-    fontWeight: 800,
-    color: '#0f172a',
-  },
-  stepText: {
-    marginTop: '10px',
-    color: '#475569',
-    lineHeight: 1.75,
-    fontSize: '15px',
-  },
-  productSection: {
-    padding: '44px 0 16px',
-  },
-  productGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '22px',
-    alignItems: 'center',
-  },
-  productCopy: {
-    paddingRight: '10px',
-  },
-  benefitGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '12px',
-    marginTop: '24px',
-  },
-  benefitItem: {
-    background: '#ffffff',
-    borderRadius: '16px',
-    border: '1px solid rgba(15,23,42,0.06)',
-    padding: '14px 16px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    color: '#334155',
-    fontWeight: 600,
-    boxShadow: '0 12px 30px rgba(15,23,42,0.06)',
-  },
-  benefitDot: {
-    width: '10px',
-    height: '10px',
-    borderRadius: '999px',
-    background: '#2563eb',
-    flexShrink: 0,
-  },
-  productVisualWrap: {
-    display: 'grid',
-    gap: '16px',
-  },
-  productVisualMain: {
-    background: '#ffffff',
-    padding: '12px',
-    borderRadius: '28px',
-    boxShadow: '0 18px 44px rgba(15,23,42,0.08)',
-    border: '1px solid rgba(15,23,42,0.06)',
-  },
-  productImage: {
-    width: '100%',
-    height: '420px',
-    objectFit: 'cover',
-    borderRadius: '20px',
-    display: 'block',
-  },
-  productVisualCard: {
-    display: 'grid',
-    gridTemplateColumns: '180px 1fr',
-    gap: '14px',
-    background: '#ffffff',
-    padding: '12px',
-    borderRadius: '24px',
-    boxShadow: '0 18px 44px rgba(15,23,42,0.08)',
-    border: '1px solid rgba(15,23,42,0.06)',
-    alignItems: 'center',
-  },
-  productImageSmall: {
-    width: '100%',
-    height: '130px',
-    objectFit: 'cover',
-    borderRadius: '16px',
-    display: 'block',
-  },
-  productCardText: {
-    color: '#334155',
-    lineHeight: 1.75,
-    fontWeight: 600,
-  },
-  lifestyleSection: {
-    padding: '34px 0 14px',
-  },
-  lifeGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '18px',
-  },
-  lifeCard: {
-    background: '#ffffff',
-    borderRadius: '30px',
-    overflow: 'hidden',
-    boxShadow: '0 18px 44px rgba(15,23,42,0.08)',
-    border: '1px solid rgba(15,23,42,0.06)',
-  },
-  lifeImage: {
-    width: '100%',
-    height: '240px',
-    objectFit: 'cover',
-    display: 'block',
-  },
-  lifeBody: {
-    padding: '22px',
-  },
-  pricingSection: {
-    padding: '42px 0 18px',
-  },
-  pricingGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '18px',
-    alignItems: 'stretch',
-  },
-  pricingCard: {
-    background: '#ffffff',
-    borderRadius: '30px',
-    padding: '30px 24px',
-    border: '1px solid rgba(15,23,42,0.06)',
-    boxShadow: '0 18px 44px rgba(15,23,42,0.08)',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-    minHeight: '330px',
-  },
-  pricingCardFeatured: {
-    background: '#2563eb',
-    color: '#ffffff',
-    borderRadius: '30px',
-    padding: '30px 24px',
-    boxShadow: '0 28px 60px rgba(37,99,235,0.30)',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-    minHeight: '330px',
-  },
-  badge: {
-    display: 'inline-flex',
-    width: 'fit-content',
-    background: 'rgba(255,255,255,0.18)',
-    border: '1px solid rgba(255,255,255,0.24)',
-    color: '#ffffff',
-    padding: '8px 12px',
-    borderRadius: '999px',
-    fontWeight: 800,
-    fontSize: '12px',
-    textTransform: 'uppercase',
-    letterSpacing: '0.12em',
-  },
-  planName: {
-    marginTop: '12px',
-    fontSize: '24px',
-    fontWeight: 800,
-    color: '#0f172a',
-  },
-  planNameFeatured: {
-    marginTop: '12px',
-    fontSize: '24px',
-    fontWeight: 800,
-    color: '#ffffff',
-  },
-  planPrice: {
-    marginTop: '10px',
-    fontSize: '42px',
-    fontWeight: 900,
-    color: '#0f172a',
-  },
-  planPriceFeatured: {
-    marginTop: '10px',
-    fontSize: '42px',
-    fontWeight: 900,
-    color: '#ffffff',
-  },
-  planFee: {
-    marginTop: '18px',
-    color: '#334155',
-    fontWeight: 700,
-    fontSize: '17px',
-    lineHeight: 1.6,
-  },
-  planFeeFeatured: {
-    marginTop: '18px',
-    color: '#ffffff',
-    fontWeight: 700,
-    fontSize: '17px',
-    lineHeight: 1.6,
-  },
-  planButton: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    textDecoration: 'none',
-    background: '#2563eb',
-    color: '#ffffff',
-    padding: '14px 18px',
-    borderRadius: '16px',
-    fontWeight: 800,
-    marginTop: '26px',
-    width: '100%',
-  },
-  planButtonFeatured: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    textDecoration: 'none',
-    background: '#ffffff',
-    color: '#2563eb',
-    padding: '14px 18px',
-    borderRadius: '16px',
-    fontWeight: 800,
-    marginTop: '26px',
-    width: '100%',
-  },
-  ctaSection: {
-    padding: '34px 0 70px',
-  },
-  ctaCard: {
-    background: 'linear-gradient(180deg, #ffffff 0%, #eef5ff 100%)',
-    borderRadius: '36px',
-    border: '1px solid rgba(37,99,235,0.10)',
-    boxShadow: '0 24px 60px rgba(15,23,42,0.10)',
-    padding: '42px 28px',
-    textAlign: 'center',
-  },
-  ctaTitle: {
-    margin: 0,
-    fontSize: 'clamp(30px, 5vw, 48px)',
-    lineHeight: 1.08,
-    fontWeight: 900,
-    letterSpacing: '-0.04em',
-    color: '#0f172a',
-  },
-  ctaText: {
-    maxWidth: '700px',
-    margin: '14px auto 0',
-    color: '#475569',
-    fontSize: '17px',
-    lineHeight: 1.8,
-  },
-  ctaButtons: {
-    display: 'flex',
-    gap: '14px',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-    marginTop: '26px',
-  },
-};
