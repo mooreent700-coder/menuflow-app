@@ -127,11 +127,7 @@ export default function SignupPage() {
         );
       }
 
-      if (selectedPlan === "starter") {
-        router.push("/auth/agreement");
-      } else {
-        router.push(`/auth/checkout?plan=${selectedPlan}`);
-      }
+      router.push('/dashboard/owner');
     } catch (error: any) {
       alert(error?.message || t.signupFailed);
     } finally {
