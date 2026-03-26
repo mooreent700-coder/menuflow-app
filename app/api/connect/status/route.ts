@@ -2,16 +2,16 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { supabase } from "@/lib/supabase";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-03-25.dahlia",
-});
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-function getFeePercent(plan: string | null | undefined) {
-  const normalized = (plan || "starter").toLowerCase();
-  if (normalized === "growth") return 5;
-  if (normalized === "premium") return 3;
-  return 10;
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+
+if (!stripeSecretKey) {
+  throw new Error("Missing STRIPE_SECRET_KEY");
 }
+
+const stripe = new Stripe(stripeSecretKey);
 
 export async function GET(req: Request) {
   try {
@@ -24,47 +24,37 @@ export async function GET(req: Request) {
 
     const { data: restaurant, error } = await supabase
       .from("restaurants")
-      .select("id, plan, stripe_account_id, stripe_onboarding_complete, stripe_charges_enabled, stripe_payouts_enabled")
+      .select("*")
       .eq("id", restaurantId)
-      .maybeSingle();
+      .single();
 
-    if (error || !restaurant) {
-      return NextResponse.json({ error: "Restaurant not found" }, { status: 404 });
-    }
-
-    if (!restaurant.stripe_account_id) {
+    if (error || !restaurant?.stripe_account_id) {
       return NextResponse.json({
         connected: false,
         onboardingComplete: false,
         chargesEnabled: false,
         payoutsEnabled: false,
-        feePercent: getFeePercent(restaurant.plan),
+        stripeAccountId: null,
       });
     }
 
-    const account = await stripe.accounts.retrieve(restaurant.stripe_account_id);
-
-    const onboardingComplete = Boolean(account.details_submitted && account.charges_enabled && account.payouts_enabled);
-
-    await supabase
-      .from("restaurants")
-      .update({
-        stripe_onboarding_complete: onboardingComplete,
-        stripe_charges_enabled: Boolean(account.charges_enabled),
-        stripe_payouts_enabled: Boolean(account.payouts_enabled),
-      })
-      .eq("id", restaurant.id);
+    const account = await stripe.accounts.retrieve(
+      restaurant.stripe_account_id
+    );
 
     return NextResponse.json({
       connected: true,
-      accountId: account.id,
-      onboardingComplete,
-      chargesEnabled: Boolean(account.charges_enabled),
-      payoutsEnabled: Boolean(account.payouts_enabled),
-      feePercent: getFeePercent(restaurant.plan),
+      onboardingComplete: account.details_submitted,
+      chargesEnabled: account.charges_enabled,
+      payoutsEnabled: account.payouts_enabled,
+      stripeAccountId: account.id,
     });
   } catch (error: any) {
     console.error("CONNECT STATUS ERROR:", error);
-    return NextResponse.json({ error: error?.message || "Could not load Stripe status" }, { status: 500 });
+
+    return NextResponse.json(
+      { error: "Failed to get Stripe connection status" },
+      { status: 500 }
+    );
   }
 }
