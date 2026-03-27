@@ -60,7 +60,7 @@ const content = {
 
 export default function HomePage() {
   const [lang] = useState<Lang>('en');
-  const t = content[lang];
+  const t = content[lang as keyof typeof content];
 
   return (
     <main style={styles.page}>
