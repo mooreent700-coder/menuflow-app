@@ -167,7 +167,7 @@ const heroImage =
   'https://images.unsplash.com/photo-1577219491135-ce391730fb2c?auto=format&fit=crop&w=1800&q=80';
 
 const peopleImages = [
-  'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1400&q=80',
+  'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1400&q=80',
   'https://images.unsplash.com/photo-1565123409695-7b5ef63a2efb?auto=format&fit=crop&w=1400&q=80',
   'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&w=1400&q=80',
 ];
@@ -255,7 +255,7 @@ export default function HomePage() {
 
           <div className="pricingGrid">
             <div className="priceCard">
-              <div>
+              <div className="priceBody">
                 <h3 className="priceName">{t.starter}</h3>
                 <div className="priceTop">{t.starterTop}</div>
                 <div className="priceSub">{t.starterPrice}</div>
@@ -267,7 +267,7 @@ export default function HomePage() {
             </div>
 
             <div className="priceCard featured">
-              <div>
+              <div className="priceBody">
                 <div className="badge">{t.mostPopular}</div>
                 <h3 className="priceName light">{t.growth}</h3>
                 <div className="priceTop light">{t.growthTop}</div>
@@ -279,7 +279,7 @@ export default function HomePage() {
             </div>
 
             <div className="priceCard">
-              <div>
+              <div className="priceBody">
                 <h3 className="priceName">{t.premium}</h3>
                 <div className="priceTop">{t.premiumTop}</div>
                 <div className="priceFee">{t.premiumFee}</div>
@@ -480,6 +480,7 @@ export default function HomePage() {
           width: 100%;
           height: 100%;
           object-fit: cover;
+          object-position: center center;
         }
 
         .heroOverlay {
@@ -487,9 +488,9 @@ export default function HomePage() {
           inset: 0;
           background: linear-gradient(
             180deg,
-            rgba(13, 21, 33, 0.18) 0%,
-            rgba(13, 21, 33, 0.34) 46%,
-            rgba(13, 21, 33, 0.48) 100%
+            rgba(13, 21, 33, 0.14) 0%,
+            rgba(13, 21, 33, 0.28) 40%,
+            rgba(13, 21, 33, 0.52) 100%
           );
         }
 
@@ -497,7 +498,7 @@ export default function HomePage() {
           position: relative;
           z-index: 2;
           max-width: 920px;
-          padding: 32px 20px 44px;
+          padding: 130px 20px 44px;
           text-align: center;
           color: #fff;
         }
@@ -522,6 +523,7 @@ export default function HomePage() {
           font-weight: 900;
           letter-spacing: -0.055em;
           text-wrap: balance;
+          text-shadow: 0 2px 18px rgba(0, 0, 0, 0.18);
         }
 
         .heroText {
@@ -529,11 +531,12 @@ export default function HomePage() {
           max-width: 760px;
           font-size: 18px;
           line-height: 1.7;
-          color: rgba(255, 255, 255, 0.92);
+          color: rgba(255, 255, 255, 0.94);
+          text-shadow: 0 2px 14px rgba(0, 0, 0, 0.18);
         }
 
         .heroButtons {
-          margin-top: 26px;
+          margin-top: 28px;
           display: flex;
           justify-content: center;
           gap: 12px;
@@ -618,10 +621,17 @@ export default function HomePage() {
 
         .priceCard {
           padding: 24px;
+          min-height: 340px;
           display: flex;
           flex-direction: column;
           justify-content: space-between;
-          min-height: 0;
+          gap: 22px;
+        }
+
+        .priceBody {
+          display: flex;
+          flex-direction: column;
+          gap: 0;
         }
 
         .priceCard.featured {
@@ -632,6 +642,7 @@ export default function HomePage() {
 
         .badge {
           display: inline-flex;
+          width: fit-content;
           padding: 8px 12px;
           border-radius: 999px;
           background: rgba(255, 255, 255, 0.12);
@@ -679,16 +690,16 @@ export default function HomePage() {
         }
 
         .cardBtn {
-          margin-top: 24px;
           width: 100%;
+          min-height: 52px;
           background: #142132;
           color: #fff;
           padding: 13px 16px;
         }
 
         .cardBtnLight {
-          margin-top: 24px;
           width: 100%;
+          min-height: 52px;
           background: #fff;
           color: #142132;
           padding: 13px 16px;
@@ -702,6 +713,7 @@ export default function HomePage() {
           width: 100%;
           height: 240px;
           object-fit: cover;
+          object-position: center;
           display: block;
         }
 
@@ -799,45 +811,55 @@ export default function HomePage() {
           }
 
           .hero {
-            min-height: 74svh;
+            min-height: 76svh;
+          }
+
+          .heroImage {
+            object-position: center 26%;
           }
 
           .heroContent {
-            padding: 28px 16px 36px;
+            padding: 190px 16px 40px;
             max-width: 680px;
           }
 
           .pill {
-            margin-bottom: 2px;
+            margin-bottom: 4px;
           }
 
           .heroTitle {
-            max-width: 340px;
-            font-size: clamp(28px, 8.8vw, 42px);
-            line-height: 1.04;
+            max-width: 360px;
+            font-size: clamp(26px, 8.2vw, 40px);
+            line-height: 1.03;
             letter-spacing: -0.04em;
             margin-top: 16px;
           }
 
           .heroText {
-            max-width: 340px;
+            max-width: 345px;
             font-size: 16px;
-            line-height: 1.68;
+            line-height: 1.66;
             margin-top: 16px;
           }
 
           .heroButtons {
             margin-top: 22px;
             flex-direction: column;
+            align-items: center;
           }
 
           .heroButtons a {
             width: 100%;
+            max-width: 260px;
           }
 
           .sectionText {
             font-size: 16px;
             line-height: 1.72;
+          }
+
+          .priceCard {
+            min-height: 0;
           }
         }
 
