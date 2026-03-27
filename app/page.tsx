@@ -19,7 +19,7 @@ const content = {
 
     builtTitle: 'Built for real food businesses',
     builtText:
-      'A direct-ordering platform that feels premium, alive, and made for restaurants, food trucks, pop-ups, and catering brands that want customers ordering directly.',
+      'A direct-ordering platform that feels premium, alive, and made for restaurants, food trucks, pop-ups, and caterers that want customers ordering directly.',
 
     systemTitle: 'Your system, fully built for you.',
     systemText:
@@ -164,7 +164,7 @@ const content = {
 } as const;
 
 const heroImage =
-  'https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=1800&q=80';
+  'https://images.unsplash.com/photo-1577219491135-ce391730fb2c?auto=format&fit=crop&w=1800&q=80';
 
 const peopleImages = [
   'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1400&q=80',
@@ -218,7 +218,7 @@ export default function HomePage() {
       </header>
 
       <section className="hero">
-        <img src={heroImage} alt="Chef working in a busy kitchen" className="heroImage" />
+        <img src={heroImage} alt="Chef cooking in a busy kitchen" className="heroImage" />
         <div className="heroOverlay" />
         <div className="heroContent">
           <div className="pill">{t.pill}</div>
@@ -391,7 +391,7 @@ export default function HomePage() {
           width: 40px;
           height: 40px;
           border-radius: 12px;
-          background: linear-gradient(135deg, #142132 0%, #2b3f5f 100%);
+          background: linear-gradient(135deg, #0f172a 0%, #2b3f5f 100%);
           color: #fff;
           display: flex;
           align-items: center;
@@ -487,9 +487,9 @@ export default function HomePage() {
           inset: 0;
           background: linear-gradient(
             180deg,
-            rgba(13, 21, 33, 0.16) 0%,
-            rgba(13, 21, 33, 0.34) 45%,
-            rgba(13, 21, 33, 0.5) 100%
+            rgba(13, 21, 33, 0.18) 0%,
+            rgba(13, 21, 33, 0.34) 46%,
+            rgba(13, 21, 33, 0.48) 100%
           );
         }
 
@@ -799,11 +799,11 @@ export default function HomePage() {
           }
 
           .hero {
-            min-height: 72svh;
+            min-height: 74svh;
           }
 
           .heroContent {
-            padding: 28px 16px 34px;
+            padding: 28px 16px 36px;
             max-width: 680px;
           }
 
