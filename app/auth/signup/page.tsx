@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { FormEvent, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 type Lang = 'en' | 'es';
@@ -149,14 +149,58 @@ function normalizePlan(value: string | null): PlanKey {
   return 'starter';
 }
 
+function slugifyBusinessName(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-{2,}/g, '-');
+}
+
+async function generateUniqueSlug(businessName: string) {
+  const baseSlug = slugifyBusinessName(businessName) || 'store';
+  let candidate = baseSlug;
+
+  const { data: existingRows, error } = await supabase
+    .from('restaurants')
+    .select('slug')
+    .ilike('slug', `${baseSlug}%`);
+
+  if (error) {
+    throw error;
+  }
+
+  const existingSlugs = new Set(
+    (existingRows ?? [])
+      .map((row: { slug: string | null }) => row.slug)
+      .filter(Boolean)
+  );
+
+  if (!existingSlugs.has(candidate)) {
+    return candidate;
+  }
+
+  let counter = 2;
+  while (existingSlugs.has(`${baseSlug}-${counter}`)) {
+    counter += 1;
+  }
+
+  return `${baseSlug}-${counter}`;
+}
+
 export default function SignupPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [lang, setLang] = useState<Lang>('en');
   const t = copy[lang];
 
-  const [selectedPlan, setSelectedPlan] = useState<PlanKey>('starter');
-  const [paid, setPaid] = useState(false);
+  const selectedPlan = normalizePlan(searchParams.get('plan'));
+  const paid = searchParams.get('paid') === 'true';
+
+  const planCopy = planMeta[selectedPlan][lang];
 
   const [fullName, setFullName] = useState('');
   const [businessName, setBusinessName] = useState('');
@@ -164,14 +208,6 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
 
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setSelectedPlan(normalizePlan(params.get('plan')));
-    setPaid(params.get('paid') === 'true');
-  }, []);
-
-  const planCopy = planMeta[selectedPlan][lang];
 
   const helperTitle = useMemo(() => {
     if (selectedPlan === 'starter') return t.freeTitle;
@@ -233,12 +269,15 @@ export default function SignupPage() {
       } = await supabase.auth.getUser();
 
       if (user) {
+        const slug = await generateUniqueSlug(businessName);
+
         const { error: upsertError } = await supabase.from('restaurants').upsert(
           {
             owner_id: user.id,
             owner_email: email,
             name: businessName,
             plan: selectedPlan,
+            slug,
           },
           {
             onConflict: 'owner_email',
