@@ -14,12 +14,12 @@ const content = {
     pill: 'Built for real food businesses',
     heroTitle: 'MenuFlow builds and turns your menu into a website in minutes',
     heroText:
-      'Just enter your information. MenuFlow generates your storefront, menu, checkout, and ordering flow for you automatically.',
+      'Made for restaurants, food trucks, pop-ups, and caterers that want a cleaner direct-ordering experience without building everything themselves.',
     startFree: 'Start Free',
 
     builtTitle: 'Built for real food businesses',
     builtText:
-      'A direct-ordering platform that feels premium, alive, and made for restaurants that want customers ordering directly.',
+      'A direct-ordering platform that feels premium, alive, and made for restaurants, food trucks, pop-ups, and catering brands that want customers ordering directly.',
 
     systemTitle: 'Your system, fully built for you.',
     systemText:
@@ -45,20 +45,20 @@ const content = {
     showcaseEyebrow: 'Made to feel real',
     showcaseTitle: 'A storefront that feels like a real business, not a basic page.',
     showcaseText:
-      'MenuFlow gives restaurants, food trucks, caterers, and pop-ups a cleaner, stronger online presence with direct ordering built in.',
+      'MenuFlow gives restaurants, food trucks, pop-ups, and caterers a cleaner, stronger online presence with direct ordering built in.',
 
     cards: [
       {
         title: 'Restaurant-ready presentation',
-        text: 'Clean visuals, strong branding, and a more premium first impression for your customers.',
+        text: 'Clean visuals, strong branding, and a more premium first impression for dine-in, pickup, and direct-order customers.',
       },
       {
-        title: 'Built for direct orders',
-        text: 'Your own ordering flow, your own customer experience, and a cleaner system for repeat business.',
+        title: 'Perfect for food trucks and pop-ups',
+        text: 'Give customers one clean link to order fast, find you, and trust the brand from their phone.',
       },
       {
-        title: 'Mobile-first experience',
-        text: 'Designed to look right on phones first, because that is where your customers are ordering from.',
+        title: 'Built for catering and repeat business',
+        text: 'Present your menu, booking flow, and ordering experience in a way that feels professional and ready to scale.',
       },
     ],
 
@@ -67,11 +67,11 @@ const content = {
     steps: [
       {
         title: 'Enter your business information',
-        text: 'Add your restaurant name, menu, photos, phone number, and address.',
+        text: 'Add your business name, menu, photos, phone number, location, and brand details.',
       },
       {
         title: 'MenuFlow generates your storefront',
-        text: 'Your menu, checkout, and direct ordering page are created for you automatically.',
+        text: 'Your menu, presentation, checkout, and direct-ordering flow are created for you automatically.',
       },
       {
         title: 'Start taking direct orders',
@@ -81,7 +81,7 @@ const content = {
 
     finalTitle: 'Launch your ordering system without building it yourself.',
     finalText:
-      'MenuFlow turns your menu into a clean, premium ordering experience in minutes.',
+      'MenuFlow turns your menu into a clean, premium ordering experience in minutes for restaurants, food trucks, pop-ups, and caterers.',
   },
 
   es: {
@@ -92,12 +92,12 @@ const content = {
     pill: 'Hecho para negocios reales de comida',
     heroTitle: 'MenuFlow crea y convierte tu menú en un sitio web en minutos',
     heroText:
-      'Solo ingresa tu información. MenuFlow genera automáticamente tu tienda, menú, checkout y flujo de pedidos.',
+      'Hecho para restaurantes, food trucks, pop-ups y catering que quieren una experiencia de pedidos directos más limpia sin tener que construir todo por su cuenta.',
     startFree: 'Empieza Gratis',
 
     builtTitle: 'Hecho para negocios reales de comida',
     builtText:
-      'Una plataforma de pedidos directos que se siente premium, viva y hecha para restaurantes que quieren pedidos directos de sus clientes.',
+      'Una plataforma de pedidos directos que se siente premium, viva y hecha para restaurantes, food trucks, pop-ups y catering que quieren que sus clientes ordenen directamente.',
 
     systemTitle: 'Tu sistema, completamente hecho para ti.',
     systemText:
@@ -123,20 +123,20 @@ const content = {
     showcaseEyebrow: 'Hecho para sentirse real',
     showcaseTitle: 'Una tienda que se siente como un negocio real, no una página básica.',
     showcaseText:
-      'MenuFlow les da a restaurantes, food trucks, catering y pop-ups una presencia online más limpia y fuerte con pedidos directos integrados.',
+      'MenuFlow les da a restaurantes, food trucks, pop-ups y catering una presencia online más limpia y fuerte con pedidos directos integrados.',
 
     cards: [
       {
         title: 'Presentación lista para restaurante',
-        text: 'Visuales limpios, marca fuerte y una primera impresión más premium para tus clientes.',
+        text: 'Visuales limpios, marca fuerte y una primera impresión más premium para clientes de mesa, pickup y pedidos directos.',
       },
       {
-        title: 'Hecho para pedidos directos',
-        text: 'Tu propio flujo de pedidos, tu propia experiencia para el cliente y un sistema más limpio para ventas repetidas.',
+        title: 'Perfecto para food trucks y pop-ups',
+        text: 'Dales a los clientes un solo enlace limpio para ordenar rápido, encontrarte y confiar en la marca desde su teléfono.',
       },
       {
-        title: 'Experiencia mobile-first',
-        text: 'Diseñado para verse bien primero en el teléfono, porque ahí es donde tus clientes están ordenando.',
+        title: 'Hecho para catering y ventas repetidas',
+        text: 'Presenta tu menú, tu flujo de reserva y tu experiencia de pedidos de una manera que se sienta profesional y lista para crecer.',
       },
     ],
 
@@ -145,11 +145,11 @@ const content = {
     steps: [
       {
         title: 'Ingresa la información de tu negocio',
-        text: 'Agrega el nombre de tu restaurante, menú, fotos, número de teléfono y dirección.',
+        text: 'Agrega el nombre de tu negocio, menú, fotos, número de teléfono, ubicación y detalles de tu marca.',
       },
       {
         title: 'MenuFlow genera tu tienda',
-        text: 'Tu menú, checkout y página de pedidos directos se crean automáticamente.',
+        text: 'Tu menú, presentación, checkout y flujo de pedidos directos se crean automáticamente.',
       },
       {
         title: 'Empieza a recibir pedidos directos',
@@ -159,22 +159,22 @@ const content = {
 
     finalTitle: 'Lanza tu sistema de pedidos sin tener que construirlo tú mismo.',
     finalText:
-      'MenuFlow convierte tu menú en una experiencia de pedidos limpia y premium en minutos.',
+      'MenuFlow convierte tu menú en una experiencia de pedidos limpia y premium en minutos para restaurantes, food trucks, pop-ups y catering.',
   },
 } as const;
 
 const heroImage =
-  'https://images.unsplash.com/photo-1577219491135-ce391730fb2c?auto=format&fit=crop&w=1800&q=80';
+  'https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=1800&q=80';
 
 const peopleImages = [
-  'https://images.unsplash.com/photo-1600565193348-f74bd3c7ccdf?auto=format&fit=crop&w=1400&q=80',
-  'https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=1400&q=80',
-  'https://images.unsplash.com/photo-1600891964092-4316c288032e?auto=format&fit=crop&w=1400&q=80',
+  'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1400&q=80',
+  'https://images.unsplash.com/photo-1565123409695-7b5ef63a2efb?auto=format&fit=crop&w=1400&q=80',
+  'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&w=1400&q=80',
 ];
 
 export default function HomePage() {
   const [lang, setLang] = useState<Lang>('en');
-  const t = content[lang as keyof typeof content];
+  const t = content[lang];
 
   return (
     <main className="page">
@@ -218,7 +218,7 @@ export default function HomePage() {
       </header>
 
       <section className="hero">
-        <img src={heroImage} alt="Chef cooking in a busy kitchen" className="heroImage" />
+        <img src={heroImage} alt="Chef working in a busy kitchen" className="heroImage" />
         <div className="heroOverlay" />
         <div className="heroContent">
           <div className="pill">{t.pill}</div>
@@ -391,7 +391,7 @@ export default function HomePage() {
           width: 40px;
           height: 40px;
           border-radius: 12px;
-          background: linear-gradient(135deg, #0f172a 0%, #2b3f5f 100%);
+          background: linear-gradient(135deg, #142132 0%, #2b3f5f 100%);
           color: #fff;
           display: flex;
           align-items: center;
@@ -487,9 +487,9 @@ export default function HomePage() {
           inset: 0;
           background: linear-gradient(
             180deg,
-            rgba(13, 21, 33, 0.2) 0%,
-            rgba(13, 21, 33, 0.36) 45%,
-            rgba(13, 21, 33, 0.52) 100%
+            rgba(13, 21, 33, 0.16) 0%,
+            rgba(13, 21, 33, 0.34) 45%,
+            rgba(13, 21, 33, 0.5) 100%
           );
         }
 
@@ -515,20 +515,21 @@ export default function HomePage() {
         }
 
         .heroTitle {
-          margin: 18px 0 0;
+          margin: 18px auto 0;
+          max-width: 880px;
           font-size: clamp(40px, 8vw, 76px);
           line-height: 0.98;
           font-weight: 900;
-          letter-spacing: -0.06em;
+          letter-spacing: -0.055em;
           text-wrap: balance;
         }
 
         .heroText {
           margin: 18px auto 0;
-          max-width: 700px;
+          max-width: 760px;
           font-size: 18px;
           line-height: 1.7;
-          color: rgba(255, 255, 255, 0.9);
+          color: rgba(255, 255, 255, 0.92);
         }
 
         .heroButtons {
@@ -798,29 +799,45 @@ export default function HomePage() {
           }
 
           .hero {
-            min-height: 74svh;
+            min-height: 72svh;
           }
 
           .heroContent {
-            padding: 28px 16px 36px;
+            padding: 28px 16px 34px;
+            max-width: 680px;
+          }
+
+          .pill {
+            margin-bottom: 2px;
           }
 
           .heroTitle {
-            font-size: clamp(34px, 11vw, 52px);
+            max-width: 340px;
+            font-size: clamp(28px, 8.8vw, 42px);
+            line-height: 1.04;
+            letter-spacing: -0.04em;
+            margin-top: 16px;
           }
 
-          .heroText,
-          .sectionText {
+          .heroText {
+            max-width: 340px;
             font-size: 16px;
-            line-height: 1.7;
+            line-height: 1.68;
+            margin-top: 16px;
           }
 
           .heroButtons {
+            margin-top: 22px;
             flex-direction: column;
           }
 
           .heroButtons a {
             width: 100%;
+          }
+
+          .sectionText {
+            font-size: 16px;
+            line-height: 1.72;
           }
         }
 
