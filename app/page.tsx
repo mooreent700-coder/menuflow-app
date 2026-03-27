@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -167,9 +168,9 @@ const heroImage =
   'https://images.unsplash.com/photo-1577219491135-ce391730fb2c?auto=format&fit=crop&w=1800&q=80';
 
 const peopleImages = [
-  'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1400&q=80',
+  'https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=1400&q=80',
   'https://images.unsplash.com/photo-1565123409695-7b5ef63a2efb?auto=format&fit=crop&w=1400&q=80',
-  'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&w=1400&q=80',
+  'https://images.unsplash.com/photo-1528605248644-14dd04022da1?auto=format&fit=crop&w=1400&q=80',
 ];
 
 export default function HomePage() {
@@ -498,12 +499,16 @@ export default function HomePage() {
           position: relative;
           z-index: 2;
           max-width: 920px;
-          padding: 130px 20px 44px;
+          padding: 146px 20px 44px;
           text-align: center;
           color: #fff;
         }
 
         .pill {
+          position: absolute;
+          top: 24px;
+          left: 50%;
+          transform: translateX(-50%);
           display: inline-flex;
           padding: 10px 16px;
           border-radius: 999px;
@@ -513,6 +518,7 @@ export default function HomePage() {
           font-size: 14px;
           font-weight: 700;
           backdrop-filter: blur(8px);
+          white-space: nowrap;
         }
 
         .heroTitle {
@@ -631,7 +637,6 @@ export default function HomePage() {
         .priceBody {
           display: flex;
           flex-direction: column;
-          gap: 0;
         }
 
         .priceCard.featured {
@@ -819,12 +824,14 @@ export default function HomePage() {
           }
 
           .heroContent {
-            padding: 190px 16px 40px;
+            padding: 178px 16px 40px;
             max-width: 680px;
           }
 
           .pill {
-            margin-bottom: 4px;
+            top: 14px;
+            font-size: 13px;
+            padding: 10px 14px;
           }
 
           .heroTitle {
@@ -832,7 +839,7 @@ export default function HomePage() {
             font-size: clamp(26px, 8.2vw, 40px);
             line-height: 1.03;
             letter-spacing: -0.04em;
-            margin-top: 16px;
+            margin-top: 0;
           }
 
           .heroText {
