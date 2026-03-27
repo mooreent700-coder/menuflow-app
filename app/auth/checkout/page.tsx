@@ -1,216 +1,88 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 type PlanKey = 'starter' | 'growth' | 'premium';
 
-const PLAN_LINKS: Record<'growth' | 'premium', string> = {
-  growth: 'https://buy.stripe.com/14A5kC6j5f8d6GYfYZ',
-  premium: 'https://buy.stripe.com/fZu7sKcbt4JH7L23cc',
+const STRIPE_LINKS: Record<'growth' | 'premium', string> = {
+  growth: 'https://buy.stripe.com/5kQ8wO51H7EHdDr8XE2wU09',
+  premium: 'https://buy.stripe.com/00w7sKcu95wzarf7TA2wU0a',
 };
 
-function normalizePlan(value: string | null): PlanKey {
-  if (value === 'growth' || value === 'premium') return value;
-  return 'starter';
-}
+const PLAN_DATA: Record<PlanKey, { title: string; price: string; fee: string }> = {
+  starter: {
+    title: 'Starter Plan',
+    price: 'First month free',
+    fee: 'Then $19/month + 10% platform fee',
+  },
+  growth: {
+    title: 'Growth Plan',
+    price: '$49/month',
+    fee: '5% platform fee',
+  },
+  premium: {
+    title: 'Premium Plan',
+    price: '$99/month',
+    fee: '3% platform fee',
+  },
+};
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const [selectedPlan, setSelectedPlan] = useState<PlanKey>('starter');
-  const [ready, setReady] = useState(false);
+  const params = useSearchParams();
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const plan = normalizePlan(params.get('plan'));
-    setSelectedPlan(plan);
-    setReady(true);
-  }, []);
-
-  useEffect(() => {
-    if (!ready) return;
-
-    if (selectedPlan === 'starter') {
-      router.replace('/auth/signup?plan=starter');
-    }
-  }, [ready, selectedPlan, router]);
+  const plan = (params.get('plan') as PlanKey) || 'starter';
+  const data = PLAN_DATA[plan];
 
   const handleContinue = () => {
-    if (selectedPlan === 'growth' || selectedPlan === 'premium') {
-      window.location.href = PLAN_LINKS[selectedPlan];
+    // Starter = NO STRIPE (go to signup)
+    if (plan === 'starter') {
+      router.push(`/auth/signup?plan=starter`);
+      return;
+    }
+
+    // Paid plans = STRIPE
+    const link = STRIPE_LINKS[plan as 'growth' | 'premium'];
+    if (link) {
+      window.location.href = link;
     }
   };
 
-  if (!ready) {
-    return (
-      <main
-        style={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: '#f8f8f5',
-          color: '#142132',
-          padding: '24px',
-          fontFamily:
-            'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-        }}
-      >
-        <div
-          style={{
-            width: '100%',
-            maxWidth: '520px',
-            background: '#ffffff',
-            border: '1px solid rgba(20,33,50,0.08)',
-            borderRadius: '24px',
-            padding: '28px',
-            textAlign: 'center',
-            fontWeight: 800,
-            fontSize: '18px',
-          }}
-        >
-          Loading plan...
-        </div>
-      </main>
-    );
-  }
-
-  if (selectedPlan === 'starter') {
-    return null;
-  }
-
-  const title = selectedPlan === 'growth' ? 'Growth Plan' : 'Premium Plan';
-  const price = selectedPlan === 'growth' ? '$49/month' : '$99/month';
-  const fee = selectedPlan === 'growth' ? '5% platform fee' : '3% platform fee';
-
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        background: '#f8f8f5',
-        color: '#142132',
-        padding: '24px',
-        fontFamily:
-          'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      }}
-    >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '640px',
-          margin: '0 auto',
-          background: '#ffffff',
-          border: '1px solid rgba(20,33,50,0.08)',
-          borderRadius: '24px',
-          padding: '24px',
-          boxSizing: 'border-box',
-        }}
-      >
-        <div
-          style={{
-            display: 'inline-flex',
-            padding: '8px 12px',
-            borderRadius: '999px',
-            background: '#eef1ee',
-            border: '1px solid rgba(20,33,50,0.08)',
-            fontSize: '12px',
-            fontWeight: 800,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-          }}
-        >
-          Selected plan
+    <div className="min-h-screen bg-[#f7f7f7] flex items-center justify-center px-4">
+      <div className="w-full max-w-md bg-white rounded-2xl p-6 shadow-sm">
+
+        <div className="mb-4 text-xs font-semibold text-gray-500 uppercase">
+          Selected Plan
         </div>
 
-        <h1
-          style={{
-            margin: '18px 0 0',
-            fontSize: 'clamp(34px, 7vw, 48px)',
-            lineHeight: 1.05,
-            fontWeight: 900,
-            letterSpacing: '-0.04em',
-          }}
-        >
-          {title}
+        <h1 className="text-2xl font-bold mb-2">
+          {data.title}
         </h1>
 
-        <p
-          style={{
-            marginTop: '12px',
-            fontSize: '18px',
-            lineHeight: 1.7,
-            color: '#526171',
-          }}
-        >
+        <p className="text-gray-500 mb-6">
           Review your plan and continue to secure payment.
         </p>
 
-        <div
-          style={{
-            marginTop: '24px',
-            border: '1px solid rgba(20,33,50,0.08)',
-            borderRadius: '20px',
-            padding: '20px',
-            background: '#f8f8f5',
-          }}
-        >
-          <div
-            style={{
-              fontSize: '32px',
-              fontWeight: 900,
-              lineHeight: 1.05,
-              letterSpacing: '-0.04em',
-            }}
-          >
-            {price}
-          </div>
-
-          <div
-            style={{
-              marginTop: '10px',
-              fontSize: '16px',
-              fontWeight: 700,
-              color: '#526171',
-            }}
-          >
-            {fee}
-          </div>
+        <div className="bg-gray-100 rounded-xl p-4 mb-6">
+          <div className="text-xl font-bold">{data.price}</div>
+          <div className="text-sm text-gray-500">{data.fee}</div>
         </div>
 
         <button
-          type="button"
           onClick={handleContinue}
-          style={{
-            width: '100%',
-            minHeight: '56px',
-            marginTop: '24px',
-            border: 'none',
-            borderRadius: '16px',
-            background: '#142132',
-            color: '#ffffff',
-            fontSize: '16px',
-            fontWeight: 800,
-            cursor: 'pointer',
-          }}
+          className="w-full bg-black text-white py-3 rounded-xl font-semibold"
         >
-          Continue to Payment
+          {plan === 'starter' ? 'Continue Setup' : 'Continue to Payment'}
         </button>
 
-        <div style={{ marginTop: '18px' }}>
-          <Link
-            href="/"
-            style={{
-              color: '#526171',
-              textDecoration: 'none',
-              fontWeight: 700,
-              fontSize: '15px',
-            }}
-          >
-            Back
-          </Link>
-        </div>
+        <button
+          onClick={() => router.back()}
+          className="mt-4 text-sm text-gray-500"
+        >
+          Back
+        </button>
       </div>
-    </main>
+    </div>
   );
 }
