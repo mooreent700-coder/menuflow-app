@@ -1,9 +1,8 @@
-
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useMemo, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 type Lang = 'en' | 'es';
@@ -104,7 +103,6 @@ const copy = {
     next2: 'You continue to agreement',
     next3: 'You move into your MenuFlow dashboard',
     signupFailed: 'Signup failed',
-    planMissing: 'Plan missing or invalid',
     authExists:
       'This email already has an account. Try signing in instead, or use a different email.',
   },
@@ -141,7 +139,6 @@ const copy = {
     next2: 'Continúas al acuerdo',
     next3: 'Entras a tu panel de MenuFlow',
     signupFailed: 'Error al crear cuenta',
-    planMissing: 'Falta el plan o no es válido',
     authExists:
       'Este correo ya tiene una cuenta. Intenta iniciar sesión o usa otro correo.',
   },
@@ -154,15 +151,12 @@ function normalizePlan(value: string | null): PlanKey {
 
 export default function SignupPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const [lang, setLang] = useState<Lang>('en');
   const t = copy[lang];
 
-  const selectedPlan = normalizePlan(searchParams.get('plan'));
-  const paid = searchParams.get('paid') === 'true';
-
-  const planCopy = planMeta[selectedPlan][lang];
+  const [selectedPlan, setSelectedPlan] = useState<PlanKey>('starter');
+  const [paid, setPaid] = useState(false);
 
   const [fullName, setFullName] = useState('');
   const [businessName, setBusinessName] = useState('');
@@ -170,6 +164,14 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
 
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setSelectedPlan(normalizePlan(params.get('plan')));
+    setPaid(params.get('paid') === 'true');
+  }, []);
+
+  const planCopy = planMeta[selectedPlan][lang];
 
   const helperTitle = useMemo(() => {
     if (selectedPlan === 'starter') return t.freeTitle;
