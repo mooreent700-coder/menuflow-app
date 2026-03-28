@@ -73,7 +73,38 @@ export async function POST(req: Request) {
     const applicationFeeAmount = Math.max(0, Math.round(subtotal * feePercent));
     const origin = req.headers.get("origin") || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-    const session = await stripe.checkout.sessions.create({
+    const sessionConfig: Stripe.Checkout.SessionCreateParams = {
+  mode: 'payment',
+  payment_method_types: ['card'],
+  line_items,
+  success_url: `${origin}/checkout/success?slug=${restaurant.slug}&session_id={CHECKOUT_SESSION_ID}`,
+  cancel_url: `${origin}/checkout/cancel?slug=${restaurant.slug}`,
+  metadata: {
+    restaurantId: String(restaurant.id || ''),
+    restaurantSlug: String(restaurant.slug || slug || ''),
+    restaurantPlan: String(restaurant.plan || 'starter'),
+    menuFlowFeePercent: String(feePercent),
+    orderId: String(orderId || ''),
+  },
+};
+
+if (restaurant.stripe_account_id) {
+  sessionConfig.payment_intent_data = {
+    application_fee_amount: applicationFeeAmount,
+    transfer_data: {
+      destination: restaurant.stripe_account_id,
+    },
+    metadata: {
+      restaurantId: String(restaurant.id || ''),
+      restaurantSlug: String(restaurant.slug || slug || ''),
+      restaurantPlan: String(restaurant.plan || 'starter'),
+      menuFlowFeePercent: String(feePercent),
+      orderId: String(orderId || ''),
+    },
+  };
+}
+
+const session = await stripe.checkout.sessions.create(sessionConfig);
       mode: "payment",
       payment_method_types: ["card"],
       line_items,
