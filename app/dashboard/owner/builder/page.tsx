@@ -1,1253 +1,1491 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import Image from 'next/image';
+import Link from 'next/link';
+import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 
-type Restaurant = {
+type Lang = 'en' | 'es';
+
+type RestaurantRow = {
   id: string;
-  owner_email?: string | null;
+  owner_id: string;
   name: string | null;
   slug: string | null;
-  phone?: string | null;
-  address?: string | null;
-  hours?: string | null;
-  hero_image?: string | null;
-  logo_image?: string | null;
-  hide_hero?: boolean | null;
-  hide_logo?: boolean | null;
+  phone: string | null;
+  address: string | null;
+  hours: string | null;
+  hero_url: string | null;
+  logo_url: string | null;
+  hide_hero: boolean | null;
+  hide_logo: boolean | null;
 };
 
-type MenuItem = {
+type MenuItemRow = {
   id: string;
   restaurant_id: string;
   name: string | null;
-  price: number | null;
+  price: number | string | null;
   description: string | null;
   image_url: string | null;
   created_at?: string | null;
 };
 
-type Lang = "en" | "es";
+const STORAGE_BUCKET = 'menuflow-media';
 
-const COPY = {
+const copy = {
   en: {
-    eyebrow: "MenuFlow Builder",
-    title: "Add and manage menu items",
-    subtitle: "Update your menu, store images, and storefront preview.",
-    signedInAs: "Signed in as",
-    back: "Back to Dashboard",
-    yourStore: "Your Store",
-    viewStore: "View Store",
-    currentMenu: "Current Menu",
-    currentMenuSub: "Everything you add here appears in your store system.",
-    addMenuItem: "Add Menu Item",
-    itemName: "Item Name",
-    price: "Price",
-    description: "Description",
-    descriptionPlaceholder: "Fresh food made to order",
-    menuImage: "Menu Item Image",
-    heroImage: "Hero Image",
-    logoImage: "Logo Image",
-    uploadHint: "Click to upload",
-    uploadSub: "PNG, JPG, or WEBP",
-    addButton: "Add Menu Item",
-    adding: "Adding...",
-    remove: "Remove",
-    removing: "Removing...",
-    preview: "Store Preview",
-    previewSub: "Live MenuFlow storefront look",
-    noRestaurant:
-      "Save your business information in the owner dashboard first, then come back here to build your menu.",
-    noItems: "No menu items yet.",
-    itemRequired: "Item name is required.",
-    priceRequired: "Enter a valid price.",
-    addSuccess: "Menu item added successfully.",
-    removeSuccess: "Menu item removed successfully.",
-    heroSuccess: "Hero image updated.",
-    logoSuccess: "Logo image updated.",
-    uploadError: "Could not upload image.",
-    loadError: "Could not load builder.",
-    addError: "Could not add menu item.",
-    removeError: "Could not remove menu item.",
-    uploadLabelHero: "Upload Hero",
-    uploadLabelLogo: "Upload Logo",
-    uploadLabelItem: "Upload Menu Image",
-    storeImages: "Store Images",
-    storeImagesSub: "Change hero and logo whenever you need.",
-    menuCount: "items",
-    hideHero: "Hide Hero",
-    hideLogo: "Hide Logo",
-    saving: "Saving...",
-    imageOptional: "Image optional",
+    eyebrow: 'MenuFlow Builder',
+    title: 'Add and manage menu items',
+    subtitle: 'Update your menu, store images, and storefront preview.',
+    signedIn: 'Signed in as:',
+    back: 'Back to Dashboard',
+    businessInfo: 'Business Information',
+    businessName: 'Business Name',
+    storeSlug: 'Store Slug',
+    phone: 'Phone Number',
+    address: 'Address',
+    hours: 'Hours',
+    saveBusiness: 'Save Business Information',
+    savingBusiness: 'Saving...',
+    stripe: 'Stripe Payments',
+    stripeText:
+      'Connect your Stripe account to receive payouts and let MenuFlow take the correct platform fee automatically.',
+    platformFee: 'Platform fee',
+    onboardingComplete: 'Onboarding complete',
+    onboardingIncomplete: 'Onboarding incomplete',
+    chargesEnabled: 'Charges enabled',
+    payoutsEnabled: 'Payouts enabled',
+    connectStripe: 'Connect Stripe',
+    refreshStripe: 'Refresh Stripe',
+    addItem: 'Add Menu Item',
+    itemName: 'Item Name',
+    price: 'Price',
+    description: 'Description',
+    itemImage: 'Menu Item Image',
+    uploadItemImage: 'Upload Menu Image',
+    uploadItemImageSub: 'Click to upload • PNG, JPG, or WEBP',
+    imageOptional: 'Image optional',
+    addMenuItem: 'Add Menu Item',
+    addingItem: 'Adding...',
+    currentMenu: 'Current Menu',
+    itemsCount: 'items',
+    viewStore: 'View Store',
+    noItems: 'No menu items yet.',
+    storePreview: 'Store Preview',
+    previewText: 'Live MenuFlow storefront look',
+    heroPreview: 'Hero image preview will show here.',
+    storeImages: 'Store Images',
+    storeImagesText: 'Change hero and logo whenever you need.',
+    heroImage: 'Hero Image',
+    logoImage: 'Logo Image',
+    uploadHero: 'Upload Hero',
+    uploadLogo: 'Upload Logo',
+    uploadBoxText: 'Click to upload • PNG, JPG, or WEBP',
+    hideHero: 'Hide Hero',
+    hideLogo: 'Hide Logo',
+    loading: 'Loading builder...',
+    notSignedIn: 'You are not signed in.',
+    loadFailed: 'Failed to load builder.',
+    businessSaved: 'Business information saved.',
+    itemAdded: 'Menu item added.',
+    uploadFailed: 'Upload failed.',
+    saveFailed: 'Save failed.',
+    builderFailed: 'Builder action failed.',
+    heroAlt: 'Hero preview',
+    logoAlt: 'Logo preview',
+    menuImageAlt: 'Menu item preview',
+    yourStore: 'Your Store',
+    phonePlaceholder: '(323) 555-1234',
+    addressPlaceholder: '123 Main St, City, State',
+    hoursPlaceholder: 'Mon-Sat 10am - 8pm',
+    itemNamePlaceholder: 'Taco Plate',
+    pricePlaceholder: '12.99',
+    descriptionPlaceholder: 'Fresh food made to order',
+    noSlug: 'No slug yet',
+    noBusiness: 'Business name missing',
   },
   es: {
-    eyebrow: "Constructor de MenuFlow",
-    title: "Agrega y administra artículos del menú",
-    subtitle: "Actualiza tu menú, imágenes de la tienda y vista previa.",
-    signedInAs: "Sesión iniciada como",
-    back: "Volver al Panel",
-    yourStore: "Tu Tienda",
-    viewStore: "Ver Tienda",
-    currentMenu: "Menú Actual",
-    currentMenuSub: "Todo lo que agregues aquí aparece en tu tienda.",
-    addMenuItem: "Agregar Artículo",
-    itemName: "Nombre del Artículo",
-    price: "Precio",
-    description: "Descripción",
-    descriptionPlaceholder: "Comida fresca hecha al momento",
-    menuImage: "Imagen del Artículo",
-    heroImage: "Imagen Principal",
-    logoImage: "Imagen del Logo",
-    uploadHint: "Haz clic para subir",
-    uploadSub: "PNG, JPG o WEBP",
-    addButton: "Agregar Artículo",
-    adding: "Agregando...",
-    remove: "Eliminar",
-    removing: "Eliminando...",
-    preview: "Vista Previa de la Tienda",
-    previewSub: "Vista en vivo del estilo MenuFlow",
-    noRestaurant:
-      "Guarda primero la información de tu negocio en el panel del dueño y luego regresa aquí para construir tu menú.",
-    noItems: "Todavía no hay artículos.",
-    itemRequired: "El nombre del artículo es obligatorio.",
-    priceRequired: "Ingresa un precio válido.",
-    addSuccess: "Artículo agregado correctamente.",
-    removeSuccess: "Artículo eliminado correctamente.",
-    heroSuccess: "Imagen principal actualizada.",
-    logoSuccess: "Logo actualizado.",
-    uploadError: "No se pudo subir la imagen.",
-    loadError: "No se pudo cargar el constructor.",
-    addError: "No se pudo agregar el artículo.",
-    removeError: "No se pudo eliminar el artículo.",
-    uploadLabelHero: "Subir Principal",
-    uploadLabelLogo: "Subir Logo",
-    uploadLabelItem: "Subir Imagen",
-    storeImages: "Imágenes de la Tienda",
-    storeImagesSub: "Cambia la principal y el logo cuando quieras.",
-    menuCount: "artículos",
-    hideHero: "Ocultar Principal",
-    hideLogo: "Ocultar Logo",
-    saving: "Guardando...",
-    imageOptional: "Imagen opcional",
+    eyebrow: 'Constructor MenuFlow',
+    title: 'Agrega y administra productos del menú',
+    subtitle: 'Actualiza tu menú, imágenes de tienda y vista previa del storefront.',
+    signedIn: 'Sesión iniciada como:',
+    back: 'Volver al Panel',
+    businessInfo: 'Información del Negocio',
+    businessName: 'Nombre del Negocio',
+    storeSlug: 'Slug de la Tienda',
+    phone: 'Número de Teléfono',
+    address: 'Dirección',
+    hours: 'Horario',
+    saveBusiness: 'Guardar Información del Negocio',
+    savingBusiness: 'Guardando...',
+    stripe: 'Pagos con Stripe',
+    stripeText:
+      'Conecta tu cuenta de Stripe para recibir pagos y permitir que MenuFlow cobre la tarifa correcta automáticamente.',
+    platformFee: 'Tarifa de plataforma',
+    onboardingComplete: 'Onboarding completo',
+    onboardingIncomplete: 'Onboarding incompleto',
+    chargesEnabled: 'Cobros habilitados',
+    payoutsEnabled: 'Pagos habilitados',
+    connectStripe: 'Conectar Stripe',
+    refreshStripe: 'Actualizar Stripe',
+    addItem: 'Agregar Producto',
+    itemName: 'Nombre del Producto',
+    price: 'Precio',
+    description: 'Descripción',
+    itemImage: 'Imagen del Producto',
+    uploadItemImage: 'Subir Imagen del Menú',
+    uploadItemImageSub: 'Haz clic para subir • PNG, JPG o WEBP',
+    imageOptional: 'Imagen opcional',
+    addMenuItem: 'Agregar Producto',
+    addingItem: 'Agregando...',
+    currentMenu: 'Menú Actual',
+    itemsCount: 'productos',
+    viewStore: 'Ver Tienda',
+    noItems: 'Todavía no hay productos.',
+    storePreview: 'Vista Previa de la Tienda',
+    previewText: 'Vista real del storefront de MenuFlow',
+    heroPreview: 'La vista previa del hero aparecerá aquí.',
+    storeImages: 'Imágenes de la Tienda',
+    storeImagesText: 'Cambia el hero y el logo cuando quieras.',
+    heroImage: 'Imagen Hero',
+    logoImage: 'Imagen Logo',
+    uploadHero: 'Subir Hero',
+    uploadLogo: 'Subir Logo',
+    uploadBoxText: 'Haz clic para subir • PNG, JPG o WEBP',
+    hideHero: 'Ocultar Hero',
+    hideLogo: 'Ocultar Logo',
+    loading: 'Cargando constructor...',
+    notSignedIn: 'No has iniciado sesión.',
+    loadFailed: 'No se pudo cargar el constructor.',
+    businessSaved: 'Información del negocio guardada.',
+    itemAdded: 'Producto agregado.',
+    uploadFailed: 'La subida falló.',
+    saveFailed: 'No se pudo guardar.',
+    builderFailed: 'La acción del constructor falló.',
+    heroAlt: 'Vista previa del hero',
+    logoAlt: 'Vista previa del logo',
+    menuImageAlt: 'Vista previa del producto',
+    yourStore: 'Tu Tienda',
+    phonePlaceholder: '(323) 555-1234',
+    addressPlaceholder: '123 Main St, City, State',
+    hoursPlaceholder: 'Lun-Sáb 10am - 8pm',
+    itemNamePlaceholder: 'Plato de tacos',
+    pricePlaceholder: '12.99',
+    descriptionPlaceholder: 'Comida fresca hecha al momento',
+    noSlug: 'Todavía no hay slug',
+    noBusiness: 'Falta nombre del negocio',
   },
 } as const;
 
-const COLORS = {
-  page: "#f6f8fc",
-  card: "#ffffff",
-  border: "#e5e7eb",
-  text: "#1f2937",
-  sub: "#6b7280",
-  blue: "#3b82f6",
-  blueDark: "#2563eb",
-  blueSoft: "#eff6ff",
-  blueBorder: "#bfdbfe",
-  redSoft: "#fee2e2",
-  redText: "#b91c1c",
-  shadow: "0 16px 42px rgba(15, 23, 42, 0.08)",
-};
+function formatPrice(value: number | string | null | undefined) {
+  const numeric = Number(value ?? 0);
+  if (Number.isNaN(numeric)) return '$0.00';
+  return `$${numeric.toFixed(2)}`;
+}
 
-export default function OwnerBuilderPage() {
+function getSignedImagePath(folder: string, fileName: string) {
+  const safeName = fileName.replace(/[^a-zA-Z0-9.-]/g, '-');
+  return `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeName}`;
+}
+
+export default function MenuBuilderPage() {
   const router = useRouter();
-  const [lang, setLang] = useState<Lang>("en");
-  const t = COPY[lang];
+
+  const [lang, setLang] = useState<Lang>('en');
+  const t = copy[lang];
 
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState("");
-  const [adding, setAdding] = useState(false);
-  const [removingId, setRemovingId] = useState("");
-  const [uploadingMenuImage, setUploadingMenuImage] = useState(false);
-  const [uploadingHero, setUploadingHero] = useState(false);
-  const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [savingHeroToggle, setSavingHeroToggle] = useState(false);
-  const [savingLogoToggle, setSavingLogoToggle] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
+  const [restaurantId, setRestaurantId] = useState('');
+  const [businessName, setBusinessName] = useState('');
+  const [slug, setSlug] = useState('');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
+  const [hours, setHours] = useState('');
+  const [heroUrl, setHeroUrl] = useState('');
+  const [logoUrl, setLogoUrl] = useState('');
+  const [hideHero, setHideHero] = useState(false);
+  const [hideLogo, setHideLogo] = useState(false);
 
-  const [userEmail, setUserEmail] = useState("");
-  const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-
-  const [itemName, setItemName] = useState("");
-  const [itemPrice, setItemPrice] = useState("");
-  const [itemDescription, setItemDescription] = useState("");
+  const [menuName, setMenuName] = useState('');
+  const [menuPrice, setMenuPrice] = useState('');
+  const [menuDescription, setMenuDescription] = useState('');
   const [menuImageFile, setMenuImageFile] = useState<File | null>(null);
-  const [menuImagePreview, setMenuImagePreview] = useState("");
+  const [menuImagePreview, setMenuImagePreview] = useState('');
 
-  const loadingRef = useRef(false);
+  const [heroUploading, setHeroUploading] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [savingBusiness, setSavingBusiness] = useState(false);
+  const [addingItem, setAddingItem] = useState(false);
+
+  const [menuItems, setMenuItems] = useState<MenuItemRow[]>([]);
+
+  const heroInputRef = useRef<HTMLInputElement | null>(null);
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
+  const menuImageInputRef = useRef<HTMLInputElement | null>(null);
+
+  const itemCountLabel = useMemo(() => {
+    return `${menuItems.length} ${t.itemsCount}`;
+  }, [menuItems.length, t.itemsCount]);
 
   useEffect(() => {
-    void loadBuilder();
-  }, []);
+    let mounted = true;
 
-  async function loadBuilder() {
-    if (loadingRef.current) return;
-    loadingRef.current = true;
+    const loadBuilder = async () => {
+      try {
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
 
-    try {
-      setLoading(true);
-      setMessage("");
+        if (sessionError) throw sessionError;
 
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
-
-      if (authError) throw authError;
-      if (!user?.email) {
-        setMessage(t.loadError);
-        setLoading(false);
-        return;
-      }
-
-      setUserEmail(user.email);
-
-      const { data: restaurantData, error: restaurantError } = await supabase
-        .from("restaurants")
-        .select("*")
-        .eq("owner_email", user.email)
-        .maybeSingle();
-
-      if (restaurantError) throw restaurantError;
-
-      if (!restaurantData) {
-        setRestaurant(null);
-        setMenuItems([]);
-        setMessage(t.noRestaurant);
-        setLoading(false);
-        return;
-      }
-
-      const typedRestaurant = restaurantData as Restaurant;
-      setRestaurant(typedRestaurant);
-      await loadMenuItems(typedRestaurant.id);
-      setLoading(false);
-    } catch (err: any) {
-      setMessage(err?.message || t.loadError);
-      setLoading(false);
-    } finally {
-      loadingRef.current = false;
-    }
-  }
-
-  async function loadMenuItems(restaurantId: string) {
-    const { data, error } = await supabase
-      .from("menu_items")
-      .select("*")
-      .eq("restaurant_id", restaurantId)
-      .order("created_at", { ascending: false });
-
-    if (error) throw error;
-    setMenuItems((data || []) as MenuItem[]);
-  }
-
-  async function uploadImage(file: File, folder: "menu" | "hero" | "logo") {
-    const ext = file.name.split(".").pop() || "png";
-    const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-
-    const { error } = await supabase.storage.from("menu-images").upload(fileName, file, {
-      upsert: false,
-    });
-
-    if (error) return null;
-
-    const { data } = supabase.storage.from("menu-images").getPublicUrl(fileName);
-    return data.publicUrl;
-  }
-
-  function onMenuFileSelected(file: File | null) {
-    setMenuImageFile(file || null);
-
-    if (!file) {
-      setMenuImagePreview("");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setMenuImagePreview(String(reader.result || ""));
-    };
-    reader.readAsDataURL(file);
-  }
-
-  async function handleAddMenuItem() {
-    if (!restaurant?.id) {
-      setMessage(t.noRestaurant);
-      return;
-    }
-
-    const cleanName = itemName.trim();
-    const cleanDescription = itemDescription.trim();
-    const parsedPrice = Number(itemPrice);
-
-    if (!cleanName) {
-      setMessage(t.itemRequired);
-      return;
-    }
-
-    if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
-      setMessage(t.priceRequired);
-      return;
-    }
-
-    try {
-      setAdding(true);
-      setMessage("");
-
-      let imageUrl: string | null = null;
-
-      if (menuImageFile) {
-        setUploadingMenuImage(true);
-        imageUrl = await uploadImage(menuImageFile, "menu");
-        setUploadingMenuImage(false);
-
-        if (!imageUrl) {
-          setMessage(t.uploadError);
-          setAdding(false);
+        const user = session?.user;
+        if (!user) {
+          alert(t.notSignedIn);
+          router.push('/auth/login');
           return;
         }
+
+        const email = user.email ?? '';
+        if (mounted) setUserEmail(email);
+
+        const { data: restaurantData, error: restaurantError } = await supabase
+          .from('restaurants')
+          .select(
+            'id, owner_id, name, slug, phone, address, hours, hero_url, logo_url, hide_hero, hide_logo'
+          )
+          .eq('owner_id', user.id)
+          .maybeSingle();
+
+        if (restaurantError) throw restaurantError;
+
+        const restaurant = restaurantData as RestaurantRow | null;
+
+        if (mounted && restaurant) {
+          setRestaurantId(restaurant.id);
+          setBusinessName(restaurant.name ?? '');
+          setSlug(restaurant.slug ?? '');
+          setPhone(restaurant.phone ?? '');
+          setAddress(restaurant.address ?? '');
+          setHours(restaurant.hours ?? '');
+          setHeroUrl(restaurant.hero_url ?? '');
+          setLogoUrl(restaurant.logo_url ?? '');
+          setHideHero(Boolean(restaurant.hide_hero));
+          setHideLogo(Boolean(restaurant.hide_logo));
+        }
+
+        if (restaurant?.id) {
+          const { data: itemData, error: itemError } = await supabase
+            .from('menu_items')
+            .select('id, restaurant_id, name, price, description, image_url, created_at')
+            .eq('restaurant_id', restaurant.id)
+            .order('created_at', { ascending: false });
+
+          if (itemError) throw itemError;
+
+          if (mounted) {
+            setMenuItems((itemData ?? []) as MenuItemRow[]);
+          }
+        }
+      } catch (error: any) {
+        alert(error?.message || t.loadFailed);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    loadBuilder();
+
+    return () => {
+      mounted = false;
+    };
+  }, [router, t.loadFailed, t.notSignedIn]);
+
+  const uploadToStorage = async (folder: string, file: File) => {
+    const filePath = getSignedImagePath(folder, file.name);
+
+    const { error: uploadError } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(filePath);
+    return data.publicUrl;
+  };
+
+  const refreshMenuItems = async (targetRestaurantId: string) => {
+    const { data, error } = await supabase
+      .from('menu_items')
+      .select('id, restaurant_id, name, price, description, image_url, created_at')
+      .eq('restaurant_id', targetRestaurantId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    setMenuItems((data ?? []) as MenuItemRow[]);
+  };
+
+  const handleHeroUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    try {
+      const file = e.target.files?.[0];
+      if (!file || !restaurantId) return;
+
+      setHeroUploading(true);
+      const publicUrl = await uploadToStorage('hero-images', file);
+
+      const { error } = await supabase
+        .from('restaurants')
+        .update({ hero_url: publicUrl })
+        .eq('id', restaurantId);
+
+      if (error) throw error;
+
+      setHeroUrl(publicUrl);
+    } catch (error: any) {
+      alert(error?.message || t.uploadFailed);
+    } finally {
+      setHeroUploading(false);
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  const handleLogoUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    try {
+      const file = e.target.files?.[0];
+      if (!file || !restaurantId) return;
+
+      setLogoUploading(true);
+      const publicUrl = await uploadToStorage('logo-images', file);
+
+      const { error } = await supabase
+        .from('restaurants')
+        .update({ logo_url: publicUrl })
+        .eq('id', restaurantId);
+
+      if (error) throw error;
+
+      setLogoUrl(publicUrl);
+    } catch (error: any) {
+      alert(error?.message || t.uploadFailed);
+    } finally {
+      setLogoUploading(false);
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  const handleMenuImageSelect = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setMenuImageFile(file);
+
+    if (file) {
+      setMenuImagePreview(URL.createObjectURL(file));
+    } else {
+      setMenuImagePreview('');
+    }
+  };
+
+  const handleSaveBusiness = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (!restaurantId) return;
+
+    try {
+      setSavingBusiness(true);
+
+      const { error } = await supabase
+        .from('restaurants')
+        .update({
+          name: businessName.trim(),
+          phone: phone.trim(),
+          address: address.trim(),
+          hours: hours.trim(),
+          hide_hero: hideHero,
+          hide_logo: hideLogo,
+        })
+        .eq('id', restaurantId);
+
+      if (error) throw error;
+
+      alert(t.businessSaved);
+    } catch (error: any) {
+      alert(error?.message || t.saveFailed);
+    } finally {
+      setSavingBusiness(false);
+    }
+  };
+
+  const handleAddMenuItem = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (!restaurantId) return;
+
+    try {
+      setAddingItem(true);
+
+      let imageUrl = '';
+      if (menuImageFile) {
+        imageUrl = await uploadToStorage('menu-items', menuImageFile);
       }
 
-      const { data, error } = await supabase
-        .from("menu_items")
-        .insert({
-          restaurant_id: restaurant.id,
-          name: cleanName,
-          price: parsedPrice,
-          description: cleanDescription || null,
-          image_url: imageUrl,
-        })
-        .select("*")
-        .single();
-
-      if (error) throw error;
-
-      setMenuItems((prev) => [data as MenuItem, ...prev]);
-      setItemName("");
-      setItemPrice("");
-      setItemDescription("");
-      setMenuImageFile(null);
-      setMenuImagePreview("");
-      setMessage(t.addSuccess);
-    } catch (err: any) {
-      setMessage(err?.message || t.addError);
-    } finally {
-      setUploadingMenuImage(false);
-      setAdding(false);
-    }
-  }
-
-  async function handleRemoveMenuItem(id: string) {
-    try {
-      setRemovingId(id);
-      setMessage("");
-
-      const { error } = await supabase.from("menu_items").delete().eq("id", id);
-      if (error) throw error;
-
-      setMenuItems((prev) => prev.filter((item) => item.id !== id));
-      setMessage(t.removeSuccess);
-    } catch (err: any) {
-      setMessage(err?.message || t.removeError);
-    } finally {
-      setRemovingId("");
-    }
-  }
-
-  async function updateStoreImage(type: "hero" | "logo", file: File | null) {
-    if (!restaurant?.id || !file) return;
-
-    try {
-      setMessage("");
-      if (type === "hero") setUploadingHero(true);
-      if (type === "logo") setUploadingLogo(true);
-
-      const url = await uploadImage(file, type);
-      if (!url) {
-        setMessage(t.uploadError);
+      const numericPrice = Number(menuPrice);
+      if (Number.isNaN(numericPrice)) {
+        alert('Price must be a valid number.');
         return;
       }
 
-      const payload = type === "hero" ? { hero_image: url } : { logo_image: url };
-
-      const { data, error } = await supabase
-        .from("restaurants")
-        .update(payload)
-        .eq("id", restaurant.id)
-        .select("*")
-        .single();
-
-      if (error) throw error;
-
-      setRestaurant(data as Restaurant);
-      setMessage(type === "hero" ? t.heroSuccess : t.logoSuccess);
-    } catch (err: any) {
-      setMessage(err?.message || t.uploadError);
-    } finally {
-      setUploadingHero(false);
-      setUploadingLogo(false);
-    }
-  }
-
-  async function updateHideToggle(type: "hero" | "logo", value: boolean) {
-    if (!restaurant?.id) return;
-
-    try {
-      setMessage("");
-      if (type === "hero") setSavingHeroToggle(true);
-      if (type === "logo") setSavingLogoToggle(true);
-
-      const payload = type === "hero" ? { hide_hero: value } : { hide_logo: value };
-
-      const { data, error } = await supabase
-        .from("restaurants")
-        .update(payload)
-        .eq("id", restaurant.id)
-        .select("*")
-        .single();
+      const { error } = await supabase.from('menu_items').insert({
+        restaurant_id: restaurantId,
+        name: menuName.trim(),
+        price: numericPrice,
+        description: menuDescription.trim(),
+        image_url: imageUrl || null,
+      });
 
       if (error) throw error;
 
-      setRestaurant(data as Restaurant);
-    } catch (err: any) {
-      setMessage(err?.message || t.uploadError);
+      setMenuName('');
+      setMenuPrice('');
+      setMenuDescription('');
+      setMenuImageFile(null);
+      setMenuImagePreview('');
+
+      await refreshMenuItems(restaurantId);
+      alert(t.itemAdded);
+    } catch (error: any) {
+      alert(error?.message || t.builderFailed);
     } finally {
-      setSavingHeroToggle(false);
-      setSavingLogoToggle(false);
+      setAddingItem(false);
     }
-  }
+  };
 
-  const storeLink = useMemo(() => {
-    if (!restaurant?.slug) return "#";
-    return `/store/${restaurant.slug}`;
-  }, [restaurant?.slug]);
+  const handleViewStore = () => {
+    if (!slug) {
+      alert(t.noSlug);
+      return;
+    }
 
-  const showHeroInPreview = !restaurant?.hide_hero && !!restaurant?.hero_image;
-  const showLogoInPreview = !restaurant?.hide_logo && !!restaurant?.logo_image;
+    router.push(`/store/${slug}`);
+  };
+
+  const heroVisible = Boolean(heroUrl) && !hideHero;
+  const logoVisible = Boolean(logoUrl) && !hideLogo;
 
   if (loading) {
     return (
-      <div style={page}>
-        <div style={loadingWrap}>Loading builder...</div>
-      </div>
+      <main className="loadingPage">
+        <div className="loadingBox">{t.loading}</div>
+
+        <style jsx>{`
+          .loadingPage {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f5f7fb;
+            padding: 24px;
+          }
+
+          .loadingBox {
+            color: #142132;
+            font-size: 18px;
+            font-weight: 800;
+            font-family:
+              Inter,
+              ui-sans-serif,
+              system-ui,
+              -apple-system,
+              BlinkMacSystemFont,
+              'Segoe UI',
+              sans-serif;
+          }
+        `}</style>
+      </main>
     );
   }
 
   return (
-    <div style={page}>
-      <div style={shell}>
-        <section style={heroCard}>
+    <main className="page">
+      <section className="hero">
+        <div className="heroTop">
           <div>
-            <div style={eyebrow}>{t.eyebrow}</div>
-            <h1 style={heroTitle}>{t.title}</h1>
-            <p style={heroText}>{t.subtitle}</p>
-            <div style={signedInText}>
-              {t.signedInAs}: {userEmail}
+            <div className="eyebrow">{t.eyebrow}</div>
+            <h1 className="title">{t.title}</h1>
+            <p className="subtitle">{t.subtitle}</p>
+            <div className="signedIn">
+              {t.signedIn} <strong>{userEmail}</strong>
             </div>
           </div>
 
-          <div style={heroActions}>
-            <button style={backButton} onClick={() => router.push("/dashboard/owner")}>
+          <div className="topActions">
+            <Link href="/dashboard" className="backButton">
               {t.back}
-            </button>
+            </Link>
 
-            <div style={langWrap}>
-              <button type="button" onClick={() => setLang("en")} style={lang === "en" ? langActive : langButton}>
+            <div className="langWrap">
+              <button
+                type="button"
+                onClick={() => setLang('en')}
+                className={lang === 'en' ? 'langButton activeLang' : 'langButton'}
+              >
                 EN
               </button>
-              <button type="button" onClick={() => setLang("es")} style={lang === "es" ? langActive : langButton}>
+              <button
+                type="button"
+                onClick={() => setLang('es')}
+                className={lang === 'es' ? 'langButton activeLang' : 'langButton'}
+              >
                 ES
               </button>
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {message ? <div style={messageBox}>{message}</div> : null}
+      <section className="contentGrid">
+        <div className="leftCol">
+          <form onSubmit={handleAddMenuItem} className="card">
+            <h2 className="cardTitle">{t.addItem}</h2>
 
-        <section style={grid}>
-          <div style={leftCol}>
-            <div style={panel}>
-              <div style={panelTitle}>{t.addMenuItem}</div>
+            <label className="label">{t.itemName}</label>
+            <input
+              className="input"
+              value={menuName}
+              onChange={(e) => setMenuName(e.target.value)}
+              placeholder={t.itemNamePlaceholder}
+              required
+            />
 
-              <label style={label}>{t.itemName}</label>
-              <input style={input} value={itemName} onChange={(e) => setItemName(e.target.value)} />
+            <label className="label">{t.price}</label>
+            <input
+              className="input"
+              value={menuPrice}
+              onChange={(e) => setMenuPrice(e.target.value)}
+              placeholder={t.pricePlaceholder}
+              inputMode="decimal"
+              required
+            />
 
-              <label style={label}>{t.price}</label>
-              <input
-                style={input}
-                value={itemPrice}
-                onChange={(e) => setItemPrice(e.target.value)}
-                placeholder="12.99"
-                inputMode="decimal"
-              />
+            <label className="label">{t.description}</label>
+            <textarea
+              className="textarea"
+              value={menuDescription}
+              onChange={(e) => setMenuDescription(e.target.value)}
+              placeholder={t.descriptionPlaceholder}
+              required
+            />
 
-              <label style={label}>{t.description}</label>
-              <textarea
-                style={textarea}
-                value={itemDescription}
-                onChange={(e) => setItemDescription(e.target.value)}
-                placeholder={t.descriptionPlaceholder}
-              />
+            <label className="label">{t.itemImage}</label>
+            <input
+              ref={menuImageInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={handleMenuImageSelect}
+              className="hiddenInput"
+            />
 
-              <label style={label}>{t.menuImage}</label>
-              <label style={uploadCard}>
-                {menuImagePreview ? (
-                  <img src={menuImagePreview} alt="Menu preview" style={uploadPreview} />
-                ) : (
-                  <div style={uploadInner}>
-                    <div style={uploadTitle}>{t.uploadLabelItem}</div>
-                    <div style={uploadSub}>{t.uploadHint} • {t.uploadSub}</div>
-                    <div style={uploadOptional}>{t.imageOptional}</div>
-                  </div>
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  style={hiddenFileInput}
-                  onChange={(e) => onMenuFileSelected(e.target.files?.[0] || null)}
-                />
-              </label>
+            <button
+              type="button"
+              className="uploadBox"
+              onClick={() => menuImageInputRef.current?.click()}
+            >
+              {menuImagePreview ? (
+                <div className="uploadPreviewWrap">
+                  <img src={menuImagePreview} alt={t.menuImageAlt} className="uploadPreviewImage" />
+                </div>
+              ) : (
+                <>
+                  <span className="uploadTitle">{t.uploadItemImage}</span>
+                  <span className="uploadText">{t.uploadItemImageSub}</span>
+                  <span className="uploadText small">{t.imageOptional}</span>
+                </>
+              )}
+            </button>
 
-              <button style={primaryButton} onClick={() => void handleAddMenuItem()} disabled={adding}>
-                {adding || uploadingMenuImage ? t.adding : t.addButton}
+            <button type="submit" className="primaryButton" disabled={addingItem}>
+              {addingItem ? t.addingItem : t.addMenuItem}
+            </button>
+          </form>
+
+          <div className="card">
+            <div className="twoColHeader">
+              <div>
+                <h2 className="cardTitle">{t.currentMenu}</h2>
+                <div className="muted">{itemCountLabel}</div>
+              </div>
+
+              <button type="button" className="secondaryButton" onClick={handleViewStore}>
+                {t.viewStore}
               </button>
             </div>
 
-            <div style={panel}>
-              <div style={panelTitle}>{t.storeImages}</div>
-              <div style={panelSub}>{t.storeImagesSub}</div>
-
-              <div style={imageGrid}>
-                <div>
-                  <div style={uploadLabel}>{t.heroImage}</div>
-                  <label style={storeUploadCard}>
-                    {restaurant?.hero_image ? (
-                      <img src={restaurant.hero_image} alt="Hero" style={storeUploadPreviewWide} />
-                    ) : (
-                      <div style={uploadInner}>
-                        <div style={uploadTitle}>{t.uploadLabelHero}</div>
-                        <div style={uploadSub}>{t.uploadHint} • {t.uploadSub}</div>
-                      </div>
-                    )}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      style={hiddenFileInput}
-                      onChange={(e) => void updateStoreImage("hero", e.target.files?.[0] || null)}
-                    />
-                  </label>
-
-                  <label style={toggleRow}>
-                    <input
-                      type="checkbox"
-                      checked={!!restaurant?.hide_hero}
-                      onChange={(e) => void updateHideToggle("hero", e.target.checked)}
-                    />
-                    <span>{savingHeroToggle ? t.saving : t.hideHero}</span>
-                  </label>
-
-                  {uploadingHero ? (
-                    <div style={uploadState}>{lang === "en" ? "Uploading hero..." : "Subiendo principal..."}</div>
-                  ) : null}
-                </div>
-
-                <div>
-                  <div style={uploadLabel}>{t.logoImage}</div>
-                  <label style={storeUploadCardSmall}>
-                    {restaurant?.logo_image ? (
-                      <img src={restaurant.logo_image} alt="Logo" style={storeUploadPreviewSmall} />
-                    ) : (
-                      <div style={uploadInner}>
-                        <div style={uploadTitle}>{t.uploadLabelLogo}</div>
-                        <div style={uploadSub}>{t.uploadHint}</div>
-                      </div>
-                    )}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      style={hiddenFileInput}
-                      onChange={(e) => void updateStoreImage("logo", e.target.files?.[0] || null)}
-                    />
-                  </label>
-
-                  <label style={toggleRow}>
-                    <input
-                      type="checkbox"
-                      checked={!!restaurant?.hide_logo}
-                      onChange={(e) => void updateHideToggle("logo", e.target.checked)}
-                    />
-                    <span>{savingLogoToggle ? t.saving : t.hideLogo}</span>
-                  </label>
-
-                  {uploadingLogo ? (
-                    <div style={uploadState}>{lang === "en" ? "Uploading logo..." : "Subiendo logo..."}</div>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div style={rightCol}>
-            <div style={panel}>
-              <div style={panelRow}>
-                <div>
-                  <div style={panelTitle}>{t.currentMenu}</div>
-                  <div style={panelSub}>
-                    {menuItems.length} {t.menuCount}
-                  </div>
-                </div>
-
-                <div style={storeActionWrap}>
-                  <div style={storeActionLabel}>{t.yourStore}</div>
-                  <a href={storeLink} style={storeLink !== "#" ? storeButton : storeButtonDisabled}>
-                    {t.viewStore}
-                  </a>
-                </div>
-              </div>
-
+            <div className="menuList">
               {menuItems.length === 0 ? (
-                <div style={emptyBox}>{t.noItems}</div>
+                <div className="emptyBox">{t.noItems}</div>
               ) : (
-                <div style={menuList}>
-                  {menuItems.map((item) => (
-                    <div key={item.id} style={menuCard}>
-                      {item.image_url ? (
-                        <img src={item.image_url} alt={item.name || "Item"} style={menuImage} />
-                      ) : (
-                        <div style={menuImagePlaceholder}>IMG</div>
-                      )}
-
-                      <div style={menuInfo}>
-                        <div style={menuName}>{item.name || "-"}</div>
-                        <div style={menuPrice}>${Number(item.price || 0).toFixed(2)}</div>
-                        {item.description ? <div style={menuDesc}>{item.description}</div> : null}
+                menuItems.map((item) => (
+                  <div key={item.id} className="menuItemCard">
+                    <div className="menuItemTop">
+                      <div>
+                        <div className="menuItemName">{item.name || 'Untitled item'}</div>
+                        <div className="menuItemPrice">{formatPrice(item.price)}</div>
                       </div>
 
-                      <button
-                        style={removeButton}
-                        onClick={() => void handleRemoveMenuItem(item.id)}
-                        disabled={removingId === item.id}
-                      >
-                        {removingId === item.id ? t.removing : t.remove}
-                      </button>
+                      {item.image_url ? (
+                        <img
+                          src={item.image_url}
+                          alt={item.name || t.menuImageAlt}
+                          className="menuThumb"
+                        />
+                      ) : null}
                     </div>
-                  ))}
-                </div>
+
+                    {item.description ? <div className="menuItemDescription">{item.description}</div> : null}
+                  </div>
+                ))
               )}
             </div>
+          </div>
 
-            <div style={panel}>
-              <div style={panelTitle}>{t.preview}</div>
-              <div style={panelSub}>{t.previewSub}</div>
+          <form onSubmit={handleSaveBusiness} className="card">
+            <h2 className="cardTitle">{t.businessInfo}</h2>
 
-              <div style={previewCard}>
-                {showHeroInPreview ? (
-                  <div style={{ ...previewHero, backgroundImage: `url("${restaurant?.hero_image}")` }}>
-                    <div style={previewOverlay}>
-                      {showLogoInPreview ? (
-                        <img src={restaurant?.logo_image || ""} alt="Logo" style={previewLogo} />
-                      ) : null}
-                      <div style={previewName}>{restaurant?.name || "Your Store"}</div>
-                      <div style={previewMeta}>{restaurant?.slug ? `/store/${restaurant.slug}` : ""}</div>
-                    </div>
-                  </div>
-                ) : (
-                  <div style={previewHeroFallback}>
-                    {lang === "en" ? "Hero image preview will show here." : "La vista previa de la imagen principal aparecerá aquí."}
-                  </div>
-                )}
+            <label className="label">{t.businessName}</label>
+            <input
+              className="input"
+              value={businessName}
+              onChange={(e) => setBusinessName(e.target.value)}
+              placeholder={t.noBusiness}
+              required
+            />
 
-                <div style={previewBody}>
-                  {menuItems.slice(0, 3).map((item) => (
-                    <div key={item.id} style={previewMenuRow}>
-                      <div style={previewMenuLeft}>
-                        {item.image_url ? (
-                          <img src={item.image_url} alt={item.name || "Item"} style={previewThumb} />
-                        ) : (
-                          <div style={previewThumbPlaceholder}>IMG</div>
-                        )}
-                        <div>
-                          <div style={previewItemName}>{item.name || "-"}</div>
-                          {item.description ? <div style={previewItemDesc}>{item.description}</div> : null}
-                        </div>
-                      </div>
-                      <div style={previewItemPrice}>${Number(item.price || 0).toFixed(2)}</div>
-                    </div>
-                  ))}
+            <label className="label">{t.storeSlug}</label>
+            <input className="input" value={slug} disabled />
 
-                  {menuItems.length === 0 ? <div style={previewEmpty}>{t.noItems}</div> : null}
+            <label className="label">{t.phone}</label>
+            <input
+              className="input"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder={t.phonePlaceholder}
+            />
+
+            <label className="label">{t.address}</label>
+            <input
+              className="input"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder={t.addressPlaceholder}
+            />
+
+            <label className="label">{t.hours}</label>
+            <input
+              className="input"
+              value={hours}
+              onChange={(e) => setHours(e.target.value)}
+              placeholder={t.hoursPlaceholder}
+            />
+
+            <button type="submit" className="saveButton" disabled={savingBusiness}>
+              {savingBusiness ? t.savingBusiness : t.saveBusiness}
+            </button>
+          </form>
+        </div>
+
+        <div className="rightCol">
+          <div className="card previewCard">
+            <div className="twoColHeader">
+              <div>
+                <h2 className="cardTitle">{t.storePreview}</h2>
+                <div className="muted">{t.previewText}</div>
+              </div>
+
+              <div className="slugTag">/store/{slug || t.noSlug}</div>
+            </div>
+
+            <div className="previewPhone">
+              {logoVisible ? (
+                <div className="previewLogoWrap">
+                  <img src={logoUrl} alt={t.logoAlt} className="previewLogo" />
                 </div>
+              ) : null}
+
+              <div className="previewBusiness">{businessName || t.noBusiness}</div>
+
+              {heroVisible ? (
+                <div className="previewHeroWrap">
+                  <img src={heroUrl} alt={t.heroAlt} className="previewHeroImage" />
+                </div>
+              ) : (
+                <div className="previewHeroPlaceholder">{t.heroPreview}</div>
+              )}
+
+              <div className="previewMenuSection">
+                {menuItems.length === 0 ? (
+                  <div className="previewEmpty">{t.noItems}</div>
+                ) : (
+                  menuItems.slice(0, 3).map((item) => (
+                    <div key={item.id} className="previewMenuItem">
+                      {item.image_url ? (
+                        <img
+                          src={item.image_url}
+                          alt={item.name || t.menuImageAlt}
+                          className="previewMenuImage"
+                        />
+                      ) : null}
+                      <div className="previewMenuText">
+                        <div className="previewMenuName">{item.name}</div>
+                        <div className="previewMenuPrice">{formatPrice(item.price)}</div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
-        </section>
-      </div>
-    </div>
+
+          <div className="card">
+            <h2 className="cardTitle">{t.storeImages}</h2>
+            <p className="muted imageText">{t.storeImagesText}</p>
+
+            <div className="imageGrid">
+              <div>
+                <div className="label">{t.heroImage}</div>
+                <input
+                  ref={heroInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={handleHeroUpload}
+                  className="hiddenInput"
+                />
+                <button
+                  type="button"
+                  className="imageUploadBox"
+                  onClick={() => heroInputRef.current?.click()}
+                >
+                  {heroUrl ? (
+                    <div className="imagePreviewWrap">
+                      <img src={heroUrl} alt={t.heroAlt} className="imagePreview" />
+                    </div>
+                  ) : (
+                    <>
+                      <span className="uploadTitle">
+                        {heroUploading ? 'Uploading...' : t.uploadHero}
+                      </span>
+                      <span className="uploadText">{t.uploadBoxText}</span>
+                    </>
+                  )}
+                </button>
+
+                <label className="checkboxRow">
+                  <input
+                    type="checkbox"
+                    checked={hideHero}
+                    onChange={(e) => setHideHero(e.target.checked)}
+                  />
+                  <span>{t.hideHero}</span>
+                </label>
+              </div>
+
+              <div>
+                <div className="label">{t.logoImage}</div>
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={handleLogoUpload}
+                  className="hiddenInput"
+                />
+                <button
+                  type="button"
+                  className="imageUploadBox"
+                  onClick={() => logoInputRef.current?.click()}
+                >
+                  {logoUrl ? (
+                    <div className="imagePreviewWrap">
+                      <img src={logoUrl} alt={t.logoAlt} className="imagePreview" />
+                    </div>
+                  ) : (
+                    <>
+                      <span className="uploadTitle">
+                        {logoUploading ? 'Uploading...' : t.uploadLogo}
+                      </span>
+                      <span className="uploadText">{t.uploadBoxText}</span>
+                    </>
+                  )}
+                </button>
+
+                <label className="checkboxRow">
+                  <input
+                    type="checkbox"
+                    checked={hideLogo}
+                    onChange={(e) => setHideLogo(e.target.checked)}
+                  />
+                  <span>{t.hideLogo}</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div className="card">
+            <h2 className="cardTitle">{t.stripe}</h2>
+            <p className="muted">{t.stripeText}</p>
+
+            <div className="stripeGrid">
+              <div className="stripeStat">
+                <div className="stripeLabel">{t.platformFee}</div>
+                <div className="stripeValue">--</div>
+              </div>
+              <div className="stripeStat">
+                <div className="stripeLabel">{t.onboardingComplete}</div>
+                <div className="stripeValue">{t.onboardingIncomplete}</div>
+              </div>
+              <div className="stripeStat">
+                <div className="stripeLabel">{t.chargesEnabled}</div>
+                <div className="stripeValue">--</div>
+              </div>
+              <div className="stripeStat">
+                <div className="stripeLabel">{t.payoutsEnabled}</div>
+                <div className="stripeValue">--</div>
+              </div>
+            </div>
+
+            <div className="stripeButtons">
+              <button type="button" className="saveButton mutedButton">
+                {t.connectStripe}
+              </button>
+              <button type="button" className="secondaryButton">
+                {t.refreshStripe}
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <style jsx>{`
+        .page {
+          min-height: 100vh;
+          background: linear-gradient(180deg, #f6f8fd 0%, #eef3fb 100%);
+          color: #142132;
+          padding: 18px;
+          overflow-x: hidden;
+          font-family:
+            Inter,
+            ui-sans-serif,
+            system-ui,
+            -apple-system,
+            BlinkMacSystemFont,
+            'Segoe UI',
+            sans-serif;
+        }
+
+        .hero {
+          max-width: 1400px;
+          margin: 0 auto;
+          background: rgba(255, 255, 255, 0.88);
+          border: 1px solid rgba(20, 33, 50, 0.08);
+          border-radius: 34px;
+          padding: 28px;
+          box-shadow: 0 20px 46px rgba(15, 23, 42, 0.06);
+        }
+
+        .heroTop {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 20px;
+          flex-wrap: wrap;
+        }
+
+        .eyebrow {
+          color: #5b88ea;
+          font-size: 18px;
+          font-weight: 900;
+          letter-spacing: -0.02em;
+        }
+
+        .title {
+          margin: 14px 0 0;
+          font-size: clamp(42px, 7vw, 84px);
+          line-height: 0.96;
+          letter-spacing: -0.06em;
+          font-weight: 900;
+          color: #142132;
+          max-width: 680px;
+        }
+
+        .subtitle {
+          margin-top: 18px;
+          color: #5a6473;
+          font-size: clamp(18px, 2vw, 28px);
+          line-height: 1.5;
+          font-weight: 600;
+          max-width: 760px;
+        }
+
+        .signedIn {
+          margin-top: 20px;
+          color: #5a6473;
+          font-size: 16px;
+          font-weight: 700;
+        }
+
+        .signedIn strong {
+          color: #142132;
+        }
+
+        .topActions {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          flex-wrap: wrap;
+        }
+
+        .backButton,
+        .secondaryButton,
+        .saveButton,
+        .primaryButton {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border: none;
+          text-decoration: none;
+          cursor: pointer;
+          font-weight: 900;
+          transition: transform 0.15s ease, opacity 0.15s ease;
+        }
+
+        .backButton {
+          min-height: 62px;
+          padding: 0 28px;
+          border-radius: 20px;
+          background: #fff;
+          border: 1px solid rgba(20, 33, 50, 0.1);
+          color: #142132;
+          font-size: 18px;
+        }
+
+        .langWrap {
+          display: inline-flex;
+          border: 1px solid rgba(91, 136, 234, 0.22);
+          background: #eef4ff;
+          padding: 5px;
+          border-radius: 18px;
+        }
+
+        .langButton {
+          border: none;
+          background: transparent;
+          color: #6b7686;
+          min-width: 70px;
+          min-height: 58px;
+          border-radius: 14px;
+          font-size: 18px;
+          font-weight: 900;
+          cursor: pointer;
+        }
+
+        .activeLang {
+          background: #5b88ea;
+          color: #fff;
+        }
+
+        .contentGrid {
+          max-width: 1400px;
+          margin: 18px auto 0;
+          display: grid;
+          grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
+          gap: 20px;
+          align-items: start;
+        }
+
+        .leftCol,
+        .rightCol {
+          display: grid;
+          gap: 20px;
+        }
+
+        .card {
+          background: rgba(255, 255, 255, 0.9);
+          border: 1px solid rgba(20, 33, 50, 0.08);
+          border-radius: 30px;
+          padding: 26px;
+          box-shadow: 0 18px 40px rgba(15, 23, 42, 0.05);
+        }
+
+        .cardTitle {
+          margin: 0;
+          color: #142132;
+          font-size: clamp(28px, 3vw, 52px);
+          line-height: 1.02;
+          letter-spacing: -0.05em;
+          font-weight: 900;
+        }
+
+        .label {
+          display: block;
+          margin-top: 18px;
+          color: #142132;
+          font-size: 16px;
+          font-weight: 800;
+        }
+
+        .input,
+        .textarea {
+          width: 100%;
+          margin-top: 10px;
+          border-radius: 18px;
+          border: 1px solid rgba(20, 33, 50, 0.1);
+          background: #fff;
+          color: #142132;
+          font-size: 18px;
+          font-weight: 600;
+          padding: 16px 18px;
+          outline: none;
+          box-sizing: border-box;
+        }
+
+        .input {
+          min-height: 64px;
+        }
+
+        .textarea {
+          min-height: 150px;
+          resize: vertical;
+        }
+
+        .hiddenInput {
+          display: none;
+        }
+
+        .uploadBox,
+        .imageUploadBox {
+          width: 100%;
+          margin-top: 10px;
+          min-height: 220px;
+          border-radius: 24px;
+          border: 2px dashed rgba(91, 136, 234, 0.2);
+          background: #f4f7ff;
+          color: #5b88ea;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-direction: column;
+          gap: 12px;
+          padding: 18px;
+          cursor: pointer;
+        }
+
+        .uploadTitle {
+          font-size: 20px;
+          font-weight: 900;
+          text-align: center;
+        }
+
+        .uploadText {
+          color: #5a6473;
+          font-size: 16px;
+          line-height: 1.45;
+          text-align: center;
+          font-weight: 700;
+        }
+
+        .uploadText.small {
+          font-size: 14px;
+        }
+
+        .uploadPreviewWrap,
+        .imagePreviewWrap {
+          width: 100%;
+          height: 100%;
+          border-radius: 20px;
+          overflow: hidden;
+        }
+
+        .uploadPreviewImage,
+        .imagePreview {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+          border-radius: 20px;
+        }
+
+        .primaryButton,
+        .saveButton,
+        .secondaryButton {
+          min-height: 70px;
+          border-radius: 20px;
+          font-size: 20px;
+          margin-top: 18px;
+        }
+
+        .primaryButton,
+        .secondaryButton {
+          padding: 0 24px;
+        }
+
+        .primaryButton {
+          width: 100%;
+          background: #5b88ea;
+          color: #fff;
+        }
+
+        .saveButton {
+          width: 100%;
+          background: #4da751;
+          color: #fff;
+        }
+
+        .secondaryButton {
+          background: #eef4ff;
+          color: #4d7de8;
+        }
+
+        .mutedButton {
+          background: #4da751;
+          color: #fff;
+        }
+
+        .twoColHeader {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 16px;
+          flex-wrap: wrap;
+        }
+
+        .muted {
+          margin-top: 10px;
+          color: #5a6473;
+          font-size: 18px;
+          line-height: 1.5;
+          font-weight: 700;
+        }
+
+        .menuList {
+          margin-top: 18px;
+          display: grid;
+          gap: 14px;
+        }
+
+        .emptyBox {
+          margin-top: 8px;
+          border-radius: 18px;
+          background: #f7f8fb;
+          border: 1px solid rgba(20, 33, 50, 0.08);
+          padding: 22px;
+          color: #6c7685;
+          font-size: 18px;
+          font-weight: 700;
+        }
+
+        .menuItemCard {
+          border-radius: 20px;
+          background: #f9fbff;
+          border: 1px solid rgba(20, 33, 50, 0.08);
+          padding: 16px;
+        }
+
+        .menuItemTop {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 12px;
+        }
+
+        .menuItemName {
+          color: #142132;
+          font-size: 22px;
+          font-weight: 900;
+          line-height: 1.1;
+        }
+
+        .menuItemPrice {
+          margin-top: 8px;
+          color: #5b88ea;
+          font-size: 18px;
+          font-weight: 900;
+        }
+
+        .menuItemDescription {
+          margin-top: 12px;
+          color: #5a6473;
+          font-size: 15px;
+          line-height: 1.55;
+          font-weight: 700;
+        }
+
+        .menuThumb {
+          width: 84px;
+          height: 84px;
+          object-fit: cover;
+          border-radius: 16px;
+          flex-shrink: 0;
+        }
+
+        .previewCard {
+          position: sticky;
+          top: 18px;
+        }
+
+        .slugTag {
+          color: #6c7685;
+          font-size: 16px;
+          font-weight: 800;
+        }
+
+        .previewPhone {
+          margin-top: 18px;
+          border-radius: 30px;
+          border: 1px solid rgba(91, 136, 234, 0.16);
+          background: #fbfdff;
+          padding: 20px;
+          overflow: hidden;
+        }
+
+        .previewLogoWrap {
+          width: 72px;
+          height: 72px;
+          border-radius: 18px;
+          overflow: hidden;
+          margin-bottom: 14px;
+        }
+
+        .previewLogo {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+        }
+
+        .previewBusiness {
+          font-size: clamp(28px, 3vw, 42px);
+          font-weight: 900;
+          color: #142132;
+          letter-spacing: -0.04em;
+          line-height: 1.05;
+        }
+
+        .previewHeroWrap {
+          margin-top: 18px;
+          width: 100%;
+          height: 220px;
+          border-radius: 24px;
+          overflow: hidden;
+          background: #eef4ff;
+        }
+
+        .previewHeroImage {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+        }
+
+        .previewHeroPlaceholder {
+          margin-top: 18px;
+          border-radius: 24px;
+          min-height: 220px;
+          background: #eef4ff;
+          border: 1px dashed rgba(91, 136, 234, 0.2);
+          color: #5b88ea;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          padding: 18px;
+          font-size: 18px;
+          line-height: 1.5;
+          font-weight: 900;
+        }
+
+        .previewMenuSection {
+          margin-top: 18px;
+          display: grid;
+          gap: 12px;
+        }
+
+        .previewEmpty {
+          border-radius: 20px;
+          background: #fff;
+          border: 1px solid rgba(20, 33, 50, 0.08);
+          padding: 18px;
+          color: #6c7685;
+          font-size: 16px;
+          font-weight: 800;
+        }
+
+        .previewMenuItem {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          border-radius: 18px;
+          background: #fff;
+          border: 1px solid rgba(20, 33, 50, 0.08);
+          padding: 12px;
+        }
+
+        .previewMenuImage {
+          width: 68px;
+          height: 68px;
+          border-radius: 14px;
+          object-fit: cover;
+          flex-shrink: 0;
+        }
+
+        .previewMenuText {
+          min-width: 0;
+        }
+
+        .previewMenuName {
+          font-size: 18px;
+          color: #142132;
+          font-weight: 900;
+          line-height: 1.15;
+        }
+
+        .previewMenuPrice {
+          margin-top: 6px;
+          color: #5b88ea;
+          font-size: 15px;
+          font-weight: 900;
+        }
+
+        .imageGrid {
+          margin-top: 12px;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 18px;
+        }
+
+        .imageText {
+          max-width: 580px;
+        }
+
+        .checkboxRow {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          margin-top: 14px;
+          color: #142132;
+          font-size: 16px;
+          font-weight: 800;
+        }
+
+        .checkboxRow input {
+          width: 18px;
+          height: 18px;
+        }
+
+        .stripeGrid {
+          margin-top: 20px;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 14px;
+        }
+
+        .stripeStat {
+          border-radius: 20px;
+          background: #f8f9fc;
+          border: 1px solid rgba(20, 33, 50, 0.08);
+          padding: 18px;
+        }
+
+        .stripeLabel {
+          color: #6c7685;
+          font-size: 15px;
+          line-height: 1.35;
+          font-weight: 800;
+        }
+
+        .stripeValue {
+          margin-top: 10px;
+          color: #142132;
+          font-size: 18px;
+          line-height: 1.4;
+          font-weight: 900;
+          word-break: break-word;
+        }
+
+        .stripeButtons {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+          margin-top: 18px;
+        }
+
+        .stripeButtons :global(button) {
+          flex: 1 1 220px;
+          margin-top: 0;
+        }
+
+        @media (max-width: 980px) {
+          .page {
+            padding: 12px;
+          }
+
+          .hero {
+            padding: 20px;
+            border-radius: 26px;
+          }
+
+          .title {
+            font-size: clamp(34px, 12vw, 58px);
+          }
+
+          .subtitle {
+            font-size: 18px;
+          }
+
+          .backButton {
+            width: 100%;
+          }
+
+          .contentGrid {
+            grid-template-columns: 1fr;
+          }
+
+          .previewCard {
+            position: static;
+          }
+
+          .card {
+            padding: 20px;
+            border-radius: 24px;
+          }
+
+          .cardTitle {
+            font-size: clamp(26px, 9vw, 40px);
+          }
+
+          .input,
+          .textarea {
+            font-size: 16px;
+          }
+
+          .imageGrid,
+          .stripeGrid {
+            grid-template-columns: 1fr;
+          }
+
+          .uploadBox,
+          .imageUploadBox {
+            min-height: 180px;
+          }
+
+          .previewHeroWrap,
+          .previewHeroPlaceholder {
+            min-height: 180px;
+            height: 180px;
+          }
+        }
+      `}</style>
+    </main>
   );
 }
-
-const page: CSSProperties = {
-  minHeight: "100vh",
-  background: COLORS.page,
-  padding: "24px",
-  fontFamily:
-    'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-  color: COLORS.text,
-};
-
-const shell: CSSProperties = {
-  maxWidth: "1460px",
-  margin: "0 auto",
-  display: "grid",
-  gap: "22px",
-};
-
-const heroCard: CSSProperties = {
-  background: COLORS.card,
-  border: `1px solid ${COLORS.border}`,
-  borderRadius: "28px",
-  boxShadow: COLORS.shadow,
-  padding: "28px",
-  display: "flex",
-  justifyContent: "space-between",
-  gap: "18px",
-  flexWrap: "wrap",
-};
-
-const eyebrow: CSSProperties = {
-  color: COLORS.blue,
-  fontSize: "14px",
-  fontWeight: 700,
-};
-
-const heroTitle: CSSProperties = {
-  margin: "10px 0 0",
-  fontSize: "56px",
-  lineHeight: 1.02,
-  fontWeight: 900,
-  letterSpacing: "-0.04em",
-};
-
-const heroText: CSSProperties = {
-  marginTop: "10px",
-  color: COLORS.sub,
-  fontSize: "18px",
-};
-
-const signedInText: CSSProperties = {
-  marginTop: "10px",
-  color: COLORS.sub,
-  fontWeight: 600,
-  fontSize: "16px",
-};
-
-const heroActions: CSSProperties = {
-  display: "flex",
-  gap: "12px",
-  alignItems: "flex-start",
-  flexWrap: "wrap",
-};
-
-const backButton: CSSProperties = {
-  border: `1px solid ${COLORS.border}`,
-  background: "#fff",
-  color: COLORS.text,
-  borderRadius: "16px",
-  padding: "14px 18px",
-  fontWeight: 700,
-  cursor: "pointer",
-};
-
-const langWrap: CSSProperties = {
-  display: "flex",
-  background: COLORS.blueSoft,
-  border: `1px solid ${COLORS.blueBorder}`,
-  padding: "4px",
-  borderRadius: "16px",
-};
-
-const langButton: CSSProperties = {
-  border: "none",
-  background: "transparent",
-  color: COLORS.sub,
-  padding: "10px 14px",
-  borderRadius: "10px",
-  fontWeight: 800,
-  cursor: "pointer",
-};
-
-const langActive: CSSProperties = {
-  border: "none",
-  background: COLORS.blue,
-  color: "#fff",
-  padding: "10px 14px",
-  borderRadius: "10px",
-  fontWeight: 800,
-  cursor: "pointer",
-};
-
-const messageBox: CSSProperties = {
-  background: COLORS.blueSoft,
-  border: `1px solid ${COLORS.blueBorder}`,
-  color: COLORS.blueDark,
-  borderRadius: "16px",
-  padding: "14px 16px",
-  fontWeight: 700,
-};
-
-const grid: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "1fr 1fr",
-  gap: "22px",
-  alignItems: "start",
-};
-
-const leftCol: CSSProperties = {
-  display: "grid",
-  gap: "22px",
-};
-
-const rightCol: CSSProperties = {
-  display: "grid",
-  gap: "22px",
-};
-
-const panel: CSSProperties = {
-  background: COLORS.card,
-  border: `1px solid ${COLORS.border}`,
-  borderRadius: "28px",
-  boxShadow: COLORS.shadow,
-  padding: "24px",
-};
-
-const panelTitle: CSSProperties = {
-  margin: 0,
-  fontSize: "30px",
-  fontWeight: 800,
-  color: COLORS.text,
-};
-
-const panelSub: CSSProperties = {
-  marginTop: "8px",
-  color: COLORS.sub,
-  fontSize: "15px",
-  lineHeight: 1.55,
-};
-
-const panelRow: CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  gap: "16px",
-  alignItems: "flex-start",
-  flexWrap: "wrap",
-};
-
-const label: CSSProperties = {
-  display: "block",
-  marginTop: "18px",
-  marginBottom: "8px",
-  fontWeight: 800,
-  fontSize: "16px",
-  color: "#334155",
-};
-
-const input: CSSProperties = {
-  width: "100%",
-  boxSizing: "border-box",
-  padding: "16px 18px",
-  borderRadius: "16px",
-  border: `1px solid ${COLORS.border}`,
-  background: "#ffffff",
-  color: COLORS.text,
-  fontSize: "16px",
-  outline: "none",
-};
-
-const textarea: CSSProperties = {
-  width: "100%",
-  minHeight: "128px",
-  resize: "vertical",
-  boxSizing: "border-box",
-  padding: "16px 18px",
-  borderRadius: "16px",
-  border: `1px solid ${COLORS.border}`,
-  background: "#ffffff",
-  color: COLORS.text,
-  fontSize: "16px",
-  outline: "none",
-};
-
-const uploadCard: CSSProperties = {
-  marginTop: "8px",
-  width: "100%",
-  minHeight: "170px",
-  borderRadius: "20px",
-  border: `1px dashed ${COLORS.blueBorder}`,
-  background: COLORS.blueSoft,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  overflow: "hidden",
-  cursor: "pointer",
-  position: "relative",
-};
-
-const uploadInner: CSSProperties = {
-  textAlign: "center",
-  padding: "18px",
-};
-
-const uploadTitle: CSSProperties = {
-  color: COLORS.blueDark,
-  fontWeight: 800,
-  fontSize: "16px",
-};
-
-const uploadSub: CSSProperties = {
-  marginTop: "6px",
-  color: COLORS.sub,
-  fontSize: "14px",
-};
-
-const uploadOptional: CSSProperties = {
-  marginTop: "8px",
-  color: COLORS.sub,
-  fontSize: "12px",
-  fontWeight: 700,
-};
-
-const uploadPreview: CSSProperties = {
-  width: "100%",
-  height: "170px",
-  objectFit: "cover",
-};
-
-const hiddenFileInput: CSSProperties = {
-  display: "none",
-};
-
-const primaryButton: CSSProperties = {
-  marginTop: "18px",
-  width: "100%",
-  padding: "16px 18px",
-  borderRadius: "18px",
-  border: "none",
-  background: COLORS.blue,
-  color: "#fff",
-  fontWeight: 800,
-  fontSize: "17px",
-  cursor: "pointer",
-  boxShadow: "0 12px 28px rgba(37,99,235,0.22)",
-};
-
-const imageGrid: CSSProperties = {
-  marginTop: "18px",
-  display: "grid",
-  gridTemplateColumns: "1.1fr 0.9fr",
-  gap: "16px",
-};
-
-const uploadLabel: CSSProperties = {
-  fontWeight: 800,
-  color: "#334155",
-  marginBottom: "8px",
-};
-
-const storeUploadCard: CSSProperties = {
-  width: "100%",
-  minHeight: "180px",
-  borderRadius: "22px",
-  border: `1px dashed ${COLORS.blueBorder}`,
-  background: COLORS.blueSoft,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  overflow: "hidden",
-  cursor: "pointer",
-};
-
-const storeUploadCardSmall: CSSProperties = {
-  width: "100%",
-  minHeight: "180px",
-  borderRadius: "22px",
-  border: `1px dashed ${COLORS.blueBorder}`,
-  background: COLORS.blueSoft,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  overflow: "hidden",
-  cursor: "pointer",
-};
-
-const storeUploadPreviewWide: CSSProperties = {
-  width: "100%",
-  minHeight: "180px",
-  objectFit: "cover",
-};
-
-const storeUploadPreviewSmall: CSSProperties = {
-  width: "100%",
-  minHeight: "180px",
-  objectFit: "contain",
-  background: "#fff",
-};
-
-const uploadState: CSSProperties = {
-  marginTop: "8px",
-  color: COLORS.sub,
-  fontWeight: 600,
-  fontSize: "14px",
-};
-
-const toggleRow: CSSProperties = {
-  marginTop: "10px",
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
-  color: COLORS.sub,
-  fontWeight: 700,
-};
-
-const storeActionWrap: CSSProperties = {
-  display: "grid",
-  gap: "8px",
-  justifyItems: "end",
-};
-
-const storeActionLabel: CSSProperties = {
-  color: COLORS.sub,
-  fontWeight: 700,
-};
-
-const storeButton: CSSProperties = {
-  textDecoration: "none",
-  background: COLORS.blue,
-  color: "#fff",
-  borderRadius: "14px",
-  padding: "12px 16px",
-  fontWeight: 800,
-};
-
-const storeButtonDisabled: CSSProperties = {
-  textDecoration: "none",
-  background: "#cbd5e1",
-  color: "#fff",
-  borderRadius: "14px",
-  padding: "12px 16px",
-  fontWeight: 800,
-  pointerEvents: "none",
-};
-
-const emptyBox: CSSProperties = {
-  marginTop: "18px",
-  padding: "18px",
-  borderRadius: "18px",
-  background: "#f8fafc",
-  border: `1px solid ${COLORS.border}`,
-  color: COLORS.sub,
-  fontWeight: 600,
-};
-
-const menuList: CSSProperties = {
-  marginTop: "18px",
-  display: "grid",
-  gap: "14px",
-};
-
-const menuCard: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "92px 1fr auto",
-  gap: "14px",
-  alignItems: "center",
-  padding: "14px",
-  borderRadius: "20px",
-  border: `1px solid ${COLORS.border}`,
-  background: "#fff",
-};
-
-const menuImage: CSSProperties = {
-  width: "92px",
-  height: "92px",
-  objectFit: "cover",
-  borderRadius: "18px",
-  border: `1px solid ${COLORS.border}`,
-};
-
-const menuImagePlaceholder: CSSProperties = {
-  width: "92px",
-  height: "92px",
-  borderRadius: "18px",
-  border: `1px solid ${COLORS.border}`,
-  background: "#f8fafc",
-  color: "#94a3b8",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontWeight: 800,
-  fontSize: "12px",
-};
-
-const menuInfo: CSSProperties = {
-  minWidth: 0,
-};
-
-const menuName: CSSProperties = {
-  fontWeight: 800,
-  fontSize: "24px",
-  lineHeight: 1.15,
-  color: COLORS.text,
-};
-
-const menuPrice: CSSProperties = {
-  marginTop: "8px",
-  color: COLORS.sub,
-  fontSize: "18px",
-  fontWeight: 800,
-};
-
-const menuDesc: CSSProperties = {
-  marginTop: "8px",
-  color: COLORS.sub,
-  fontSize: "15px",
-  lineHeight: 1.55,
-};
-
-const removeButton: CSSProperties = {
-  border: "none",
-  background: COLORS.redSoft,
-  color: COLORS.redText,
-  borderRadius: "14px",
-  padding: "12px 14px",
-  fontWeight: 800,
-  cursor: "pointer",
-};
-
-const previewCard: CSSProperties = {
-  marginTop: "18px",
-  borderRadius: "24px",
-  overflow: "hidden",
-  border: `1px solid ${COLORS.border}`,
-  background: "#fff",
-};
-
-const previewHero: CSSProperties = {
-  height: "280px",
-  backgroundSize: "cover",
-  backgroundPosition: "center",
-  position: "relative",
-};
-
-const previewOverlay: CSSProperties = {
-  position: "absolute",
-  inset: 0,
-  background: "linear-gradient(180deg, rgba(15,23,42,0.10), rgba(15,23,42,0.58))",
-  display: "flex",
-  flexDirection: "column",
-  justifyContent: "flex-end",
-  padding: "20px",
-};
-
-const previewLogo: CSSProperties = {
-  width: "72px",
-  height: "72px",
-  objectFit: "cover",
-  borderRadius: "18px",
-  background: "#fff",
-  marginBottom: "12px",
-};
-
-const previewName: CSSProperties = {
-  color: "#fff",
-  fontSize: "34px",
-  fontWeight: 900,
-  lineHeight: 1.05,
-};
-
-const previewMeta: CSSProperties = {
-  color: "rgba(255,255,255,0.9)",
-  fontSize: "14px",
-  fontWeight: 700,
-  marginTop: "8px",
-};
-
-const previewHeroFallback: CSSProperties = {
-  height: "220px",
-  background: COLORS.blueSoft,
-  color: COLORS.blueDark,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: "20px",
-  textAlign: "center",
-  fontWeight: 700,
-};
-
-const previewBody: CSSProperties = {
-  padding: "18px",
-  display: "grid",
-  gap: "12px",
-};
-
-const previewMenuRow: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: "14px",
-};
-
-const previewMenuLeft: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: "12px",
-  minWidth: 0,
-};
-
-const previewThumb: CSSProperties = {
-  width: "58px",
-  height: "58px",
-  objectFit: "cover",
-  borderRadius: "14px",
-};
-
-const previewThumbPlaceholder: CSSProperties = {
-  width: "58px",
-  height: "58px",
-  borderRadius: "14px",
-  background: "#f3f4f6",
-  color: "#94a3b8",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontWeight: 800,
-  fontSize: "11px",
-};
-
-const previewItemName: CSSProperties = {
-  fontWeight: 800,
-  color: COLORS.text,
-};
-
-const previewItemDesc: CSSProperties = {
-  marginTop: "4px",
-  color: COLORS.sub,
-  fontSize: "13px",
-};
-
-const previewItemPrice: CSSProperties = {
-  fontWeight: 800,
-  color: COLORS.text,
-};
-
-const previewEmpty: CSSProperties = {
-  color: COLORS.sub,
-  fontWeight: 600,
-};
-
-const loadingWrap: CSSProperties = {
-  minHeight: "80vh",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontSize: "24px",
-  fontWeight: 800,
-  color: COLORS.text,
-};
