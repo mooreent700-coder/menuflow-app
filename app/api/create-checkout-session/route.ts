@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { supabase } from "@/lib/supabase";
+function getFeePercent(plan: string | null | undefined) {
+  const normalized = (plan || "starter").toLowerCase();
 
+  if (normalized === "growth") return 0.05;
+  if (normalized === "premium") return 0.03;
+
+  return 0.1; // starter default
+}
 export async function POST(req: Request) {
   try {
     const body = await req.json();
