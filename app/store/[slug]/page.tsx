@@ -23,9 +23,10 @@ export default async function Page({
   }
 
   const { data: items } = await supabase
-    .from('menu_items')
-    .select('*')
-    .eq('restaurant_id', restaurant.id);
+  .from('menu_items')
+  .select('*')
+  .eq('restaurant_id', restaurant.id)
+  .order('created_at', { ascending: false });
 
   const safeRestaurant = {
     id: restaurant.id,
