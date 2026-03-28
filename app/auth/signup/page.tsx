@@ -1,7 +1,7 @@
 'use client';
-export const dynamic = 'force-dynamic';
+
 import Link from 'next/link';
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, Suspense, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
@@ -105,6 +105,7 @@ const copy = {
     signupFailed: 'Signup failed',
     authExists:
       'This email already has an account. Try signing in instead, or use a different email.',
+    loading: 'Loading signup...',
   },
   es: {
     brand: 'MenuFlow',
@@ -141,6 +142,7 @@ const copy = {
     signupFailed: 'Error al crear cuenta',
     authExists:
       'Este correo ya tiene una cuenta. Intenta iniciar sesión o usa otro correo.',
+    loading: 'Cargando registro...',
   },
 } as const;
 
@@ -163,24 +165,20 @@ async function generateUniqueSlug(businessName: string) {
   const baseSlug = slugifyBusinessName(businessName) || 'store';
   let candidate = baseSlug;
 
-  const { data: existingRows, error } = await supabase
+  const { data, error } = await supabase
     .from('restaurants')
     .select('slug')
     .ilike('slug', `${baseSlug}%`);
 
-  if (error) {
-    throw error;
-  }
+  if (error) throw error;
 
   const existingSlugs = new Set(
-    (existingRows ?? [])
+    (data ?? [])
       .map((row: { slug: string | null }) => row.slug)
       .filter(Boolean)
   );
 
-  if (!existingSlugs.has(candidate)) {
-    return candidate;
-  }
+  if (!existingSlugs.has(candidate)) return candidate;
 
   let counter = 2;
   while (existingSlugs.has(`${baseSlug}-${counter}`)) {
@@ -190,7 +188,7 @@ async function generateUniqueSlug(businessName: string) {
   return `${baseSlug}-${counter}`;
 }
 
-export default function SignupPage() {
+function SignupInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -206,7 +204,6 @@ export default function SignupPage() {
   const [businessName, setBusinessName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
   const [loading, setLoading] = useState(false);
 
   const helperTitle = useMemo(() => {
@@ -830,5 +827,32 @@ export default function SignupPage() {
         }
       `}</style>
     </main>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense
+      fallback={
+        <main
+          style={{
+            minHeight: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: '#f8f8f5',
+            color: '#142132',
+            fontFamily:
+              'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
+            padding: '24px',
+            textAlign: 'center',
+          }}
+        >
+          <div>Loading signup...</div>
+        </main>
+      }
+    >
+      <SignupInner />
+    </Suspense>
   );
 }
