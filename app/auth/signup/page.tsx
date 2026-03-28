@@ -1,4 +1,4 @@
-eof'use client';
+'use client';
 
 export default function SignupPage() {
   return (
@@ -24,4 +24,3 @@ export default function SignupPage() {
       </div>
     </main>
   );
-}
