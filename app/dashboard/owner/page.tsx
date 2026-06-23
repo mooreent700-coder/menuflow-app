@@ -99,10 +99,20 @@ type WorkerTimeLogRow = {
   updated_at?: string | null;
 };
 
+type AnalyticsEventRow = {
+  id: string;
+  restaurant_id?: string | null;
+  owner_id?: string | null;
+  event_type?: string | null;
+  source?: string | null;
+  path?: string | null;
+  created_at?: string | null;
+};
+
 type OrderFilterKey = 'ALL' | 'NEW' | 'IN_PROGRESS' | 'READY' | 'DONE';
 type OwnerAction = 'accept' | 'ready' | 'complete' | 'cancel';
 type StripeState = 'connected' | 'incomplete' | 'not_connected';
-type NavTarget = 'dashboard' | 'orders' | 'builder' | 'flyers' | 'support' | 'workers' | 'timecabinet' | 'more';
+type NavTarget = 'dashboard' | 'orders' | 'builder' | 'flyers' | 'support' | 'workers' | 'timecabinet' | 'analytics' | 'more';
 
 const OWNER_LANG_KEY = 'orda_owner_language';
 const TERMS_LOCAL_KEY = 'orda_owner_terms_accepted';
@@ -137,6 +147,7 @@ function formatDayDate(d: Date) { return d.toLocaleDateString([], { weekday: 'lo
 function minutesAgo(value?: string | null, t = COPY.en) { if (!value) return '--'; const d = new Date(value); if (Number.isNaN(d.getTime())) return '--'; const mins = Math.max(0, Math.floor((Date.now() - d.getTime()) / 60000)); if (mins < 1) return t.justNow; if (mins < 60) return `${mins} ${t.minAgo}`; const h = Math.floor(mins / 60); if (h < 24) return `${h} ${t.hrAgo}`; return `${Math.floor(h / 24)} ${t.dayAgo}`; }
 function isToday(v?: string | null) { if (!v) return false; const d = new Date(v), n = new Date(); return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate(); }
 function isThisWeek(v?: string | null) { if (!v) return false; const d = new Date(v), n = new Date(), day = n.getDay(), off = (day + 6) % 7, start = new Date(n.getFullYear(), n.getMonth(), n.getDate() - off, 0, 0, 0, 0), end = new Date(start); end.setDate(start.getDate() + 7); return d >= start && d < end; }
+function isThisMonth(v?: string | null) { if (!v) return false; const d = new Date(v), n = new Date(); return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth(); }
 function getStatusKey(status?: string | null) { const s = (status || '').toLowerCase(); if (s.includes('cancel')) return 'cancelled'; if (s.includes('complete') || s.includes('done')) return 'completed'; if (s.includes('ready')) return 'ready'; if (s.includes('progress') || s.includes('accepted') || s.includes('prep')) return 'in_progress'; return 'new'; }
 function getStatusLabel(status: string | null | undefined, t: typeof COPY.en) { const k = getStatusKey(status); if (k === 'cancelled') return t.cancelled; if (k === 'completed') return t.completed; if (k === 'ready') return t.almostReady; if (k === 'in_progress') return t.inProgress; return t.new; }
 function statusMatchesFilter(status: string | null | undefined, f: OrderFilterKey) { const k = getStatusKey(status); return f === 'ALL' || (f === 'NEW' && k === 'new') || (f === 'IN_PROGRESS' && k === 'in_progress') || (f === 'READY' && k === 'ready') || (f === 'DONE' && k === 'completed'); }
@@ -225,7 +236,76 @@ function getWorkerTimeStatus(log: WorkerTimeLogRow | null, t: typeof COPY.en) {
   return t.noTimeLog;
 }
 
+function isViewAnalyticsEvent(event: AnalyticsEventRow) {
+  const type = String(event.event_type || '').toLowerCase();
+  return ['page_view', 'store_view', 'view', 'qr_scan', 'flyer_scan'].some(key => type.includes(key));
+}
+
+function normalizeAnalyticsSource(source?: string | null) {
+  const raw = String(source || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  if (!raw || raw === 'unknown') return 'direct';
+  if (raw.includes('instagram') || raw === 'ig') return 'instagram';
+  if (raw.includes('tiktok')) return 'tiktok';
+  if (raw.includes('facebook') || raw === 'fb') return 'facebook';
+  if (raw.includes('flyer')) return 'flyer';
+  if (raw.includes('business_card') || raw.includes('card')) return 'business_card';
+  if (raw.includes('qr')) return 'qr_code';
+  if (raw.includes('google')) return 'google';
+  if (raw.includes('direct')) return 'direct';
+  return raw;
+}
+
+function formatPercent(value: number) {
+  if (!Number.isFinite(value)) return '0%';
+  return `${value.toFixed(value >= 10 ? 0 : 1)}%`;
+}
+
+function prettyAnalyticsSource(source: string) {
+  if (source === 'qr_code') return 'QR Code';
+  if (source === 'business_card') return 'Business Card';
+  return source.split('_').filter(Boolean).map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ') || 'Direct';
+}
+
 async function trySaveAgreement(storeId: string) { const now = new Date().toISOString(); const patches = [{ owner_terms_accepted: true, owner_terms_accepted_at: now }, { terms_accepted: true, terms_accepted_at: now }, { agreement_accepted: true, agreement_accepted_at: now }]; let lastError: any = null; for (const patch of patches) { const { data, error } = await supabase.from('restaurants').update(patch).eq('id', storeId).select('*').maybeSingle(); if (!error) return data as StoreRecord | null; lastError = error; } if (lastError) console.warn('ORDA agreement saved locally only:', lastError.message || lastError); return null; }
+
+function normalizeSmsPhone(phone?: string | null) {
+  const raw = String(phone || '').trim();
+  if (!raw) return '';
+  const plus = raw.startsWith('+');
+  const digits = raw.replace(/[^\d]/g, '');
+  if (!digits) return '';
+  if (plus) return `+${digits}`;
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
+  return digits;
+}
+
+function buildCustomerStatusSms(order: OrderRow, storeName: string, action: OwnerAction) {
+  const code = String(order.id || '').slice(0, 8).toUpperCase();
+  if (action === 'ready') {
+    return `ORDA Direct: Your order from ${storeName} is ready for pickup. Order #${code}.`;
+  }
+  if (action === 'complete') {
+    return `ORDA Direct: Your order from ${storeName} has been completed. Thank you for ordering. Order #${code}.`;
+  }
+  if (action === 'accept') {
+    return `ORDA Direct: ${storeName} received your order and is preparing it now. Order #${code}.`;
+  }
+  return `ORDA Direct: Your order from ${storeName} was updated. Order #${code}.`;
+}
+
+function openOwnerSmsToCustomer(order: OrderRow, storeName: string, action: OwnerAction) {
+  if (typeof window === 'undefined') return false;
+
+  const phone = normalizeSmsPhone(order.customer_phone);
+  if (!phone) return false;
+
+  const body = encodeURIComponent(buildCustomerStatusSms(order, storeName, action));
+  window.location.href = `sms:${phone}?&body=${body}`;
+  return true;
+}
+
+
 function MobileIcon({ name }: { name: string }) { return <span className="miniSvg">{name === 'sales' ? '$' : name === 'orders' || name === 'live' ? '☰' : name === 'views' ? '◉' : name === 'stripe' ? '◫' : name === 'builder' ? '✎' : name === 'flyers' ? '⚑' : name === 'customers' ? '◎' : name === 'workers' ? '☷' : name === 'promos' ? '%' : name === 'rewards' ? '★' : name === 'analytics' ? '◔' : name === 'dashboard' ? '▦' : '•••'}</span>; }
 
 export default function OwnerDashboardPage() {
@@ -234,6 +314,7 @@ export default function OwnerDashboardPage() {
   const liveOrdersRef = useRef<HTMLElement | null>(null);
   const customersRef = useRef<HTMLElement | null>(null);
   const storefrontRef = useRef<HTMLElement | null>(null);
+  const analyticsRef = useRef<HTMLElement | null>(null);
   const workersRef = useRef<HTMLElement | null>(null);
   const timeCabinetRef = useRef<HTMLElement | null>(null);
   const mobileSupportRef = useRef<HTMLElement | null>(null);
@@ -246,6 +327,7 @@ export default function OwnerDashboardPage() {
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItemRow[]>([]);
   const [storeViews, setStoreViews] = useState(0);
+  const [analyticsEvents, setAnalyticsEvents] = useState<AnalyticsEventRow[]>([]);
   const [messages, setMessages] = useState<AdminMessageRow[]>([]);
   const [workers, setWorkers] = useState<RestaurantWorkerRow[]>([]);
   const [workerTimeLogs, setWorkerTimeLogs] = useState<WorkerTimeLogRow[]>([]);
@@ -286,6 +368,7 @@ export default function OwnerDashboardPage() {
   const loadOrdersForRestaurant = useCallback(async (id: string) => { const { data, error } = await supabase.from('orders').select('*').eq('restaurant_id', id).order('created_at', { ascending: false }).limit(100); if (error) throw error; return (data || []) as OrderRow[]; }, []);
   const loadMenuItemsForRestaurant = useCallback(async (id: string) => { const { data, error } = await supabase.from('menu_items').select('*').eq('restaurant_id', id).limit(100); if (error) throw error; return (data || []) as MenuItemRow[]; }, []);
   const loadStoreViewsForRestaurant = useCallback(async (id: string) => { try { const { count } = await supabase.from('store_views').select('*', { count: 'exact', head: true }).eq('restaurant_id', id); setStoreViews(count || 0); } catch { setStoreViews(0); } }, []);
+  const loadAnalyticsEventsForRestaurant = useCallback(async (id: string) => { try { const { data, error } = await supabase.from('analytics_events').select('*').eq('restaurant_id', id).order('created_at', { ascending: false }).limit(5000); if (error) throw error; return (data || []) as AnalyticsEventRow[]; } catch { return [] as AnalyticsEventRow[]; } }, []);
   const loadMessagesForRestaurant = useCallback(async (id: string) => { try { const { data, error } = await supabase.from('admin_messages').select('*').eq('restaurant_id', id).order('created_at', { ascending: false }).limit(50); if (error) throw error; return (data || []) as AdminMessageRow[]; } catch { return []; } }, []);
   const loadWorkersForRestaurant = useCallback(async (id: string) => { try { const { data, error } = await supabase.from('restaurant_workers').select('*').eq('restaurant_id', id).order('created_at', { ascending: false }); if (error) throw error; return (data || []) as RestaurantWorkerRow[]; } catch { return []; } }, []);
   const loadWorkerTimeLogsForRestaurant = useCallback(async (id: string) => { try { const start = new Date(); start.setHours(0,0,0,0); const { data, error } = await supabase.from('worker_time_logs').select('*').eq('restaurant_id', id).gte('created_at', start.toISOString()).order('created_at', { ascending: false }); if (error) throw error; return (data || []) as WorkerTimeLogRow[]; } catch { return []; } }, []);
@@ -295,6 +378,7 @@ export default function OwnerDashboardPage() {
     let active = true;
     let orderChannel: any = null;
     let viewChannel: any = null;
+    let analyticsChannel: any = null;
     let restaurantChannel: any = null;
     let messageChannel: any = null;
     let workersChannel: any = null;
@@ -317,6 +401,7 @@ export default function OwnerDashboardPage() {
             setWorkers([]);
             setWorkerTimeLogs([]);
             setWorkerHistoryLogs([]);
+            setAnalyticsEvents([]);
             setLoading(false);
             router.replace('/sign-in');
           }
@@ -338,13 +423,14 @@ export default function OwnerDashboardPage() {
         }
 
         if (restaurant?.id) {
-          const [fetchedOrders, fetchedItems, fetchedMessages, fetchedWorkers, fetchedTimeLogs, fetchedHistoryLogs] = await Promise.all([
+          const [fetchedOrders, fetchedItems, fetchedMessages, fetchedWorkers, fetchedTimeLogs, fetchedHistoryLogs, fetchedAnalyticsEvents] = await Promise.all([
             loadOrdersForRestaurant(restaurant.id),
             loadMenuItemsForRestaurant(restaurant.id),
             loadMessagesForRestaurant(restaurant.id),
             loadWorkersForRestaurant(restaurant.id),
             loadWorkerTimeLogsForRestaurant(restaurant.id),
             loadWorkerHistoryLogsForRestaurant(restaurant.id, timeCabinetRange),
+            loadAnalyticsEventsForRestaurant(restaurant.id),
             loadStoreViewsForRestaurant(restaurant.id),
           ]);
 
@@ -356,9 +442,11 @@ export default function OwnerDashboardPage() {
           setWorkers(fetchedWorkers);
           setWorkerTimeLogs(fetchedTimeLogs);
           setWorkerHistoryLogs(fetchedHistoryLogs);
+          setAnalyticsEvents(fetchedAnalyticsEvents);
 
           orderChannel = supabase.channel(`owner-dashboard-orders-${restaurant.id}`).on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurant.id}` }, async () => { try { const refreshed = await loadOrdersForRestaurant(restaurant.id); if (active) setOrders(refreshed); } catch {} }).subscribe();
           viewChannel = supabase.channel(`owner-dashboard-store-views-${restaurant.id}`).on('postgres_changes', { event: '*', schema: 'public', table: 'store_views', filter: `restaurant_id=eq.${restaurant.id}` }, async () => { if (active) await loadStoreViewsForRestaurant(restaurant.id); }).subscribe();
+          analyticsChannel = supabase.channel(`owner-dashboard-analytics-${restaurant.id}`).on('postgres_changes', { event: '*', schema: 'public', table: 'analytics_events', filter: `restaurant_id=eq.${restaurant.id}` }, async () => { const refreshed = await loadAnalyticsEventsForRestaurant(restaurant.id); if (active) setAnalyticsEvents(refreshed); }).subscribe();
           restaurantChannel = supabase.channel(`owner-dashboard-restaurant-${restaurant.id}`).on('postgres_changes', { event: '*', schema: 'public', table: 'restaurants', filter: `id=eq.${restaurant.id}` }, async () => { const { data } = await supabase.from('restaurants').select('*').eq('id', restaurant.id).single(); if (active && data) { setStore(data as StoreRecord); setAgreementAccepted(hasAcceptedAgreement(data as StoreRecord)); } }).subscribe();
           messageChannel = supabase.channel(`owner-dashboard-admin-messages-${restaurant.id}`).on('postgres_changes', { event: '*', schema: 'public', table: 'admin_messages', filter: `restaurant_id=eq.${restaurant.id}` }, async () => { const refreshed = await loadMessagesForRestaurant(restaurant.id); if (active) setMessages(refreshed); }).subscribe();
           workersChannel = supabase.channel(`owner-dashboard-workers-${restaurant.id}`).on('postgres_changes', { event: '*', schema: 'public', table: 'restaurant_workers', filter: `restaurant_id=eq.${restaurant.id}` }, async () => { const refreshed = await loadWorkersForRestaurant(restaurant.id); if (active) setWorkers(refreshed); }).subscribe();
@@ -374,9 +462,9 @@ export default function OwnerDashboardPage() {
     void loadData();
     return () => {
       active = false;
-      [orderChannel, viewChannel, restaurantChannel, messageChannel, workersChannel, workerTimeChannel].forEach(ch => { if (ch) supabase.removeChannel(ch); });
+      [orderChannel, viewChannel, analyticsChannel, restaurantChannel, messageChannel, workersChannel, workerTimeChannel].forEach(ch => { if (ch) supabase.removeChannel(ch); });
     };
-  }, [router, loadOrdersForRestaurant, loadMenuItemsForRestaurant, loadStoreViewsForRestaurant, loadMessagesForRestaurant, loadWorkersForRestaurant, loadWorkerTimeLogsForRestaurant, loadWorkerHistoryLogsForRestaurant, timeCabinetRange]);
+  }, [router, loadOrdersForRestaurant, loadMenuItemsForRestaurant, loadStoreViewsForRestaurant, loadAnalyticsEventsForRestaurant, loadMessagesForRestaurant, loadWorkersForRestaurant, loadWorkerTimeLogsForRestaurant, loadWorkerHistoryLogsForRestaurant, timeCabinetRange]);
 
 
   useEffect(() => {
@@ -392,11 +480,12 @@ export default function OwnerDashboardPage() {
       const dayChanged = nextDay !== currentDay;
 
       try {
-        const [nextOrders, nextMessages, nextWorkers, nextTimeLogs] = await Promise.all([
+        const [nextOrders, nextMessages, nextWorkers, nextTimeLogs, nextAnalyticsEvents] = await Promise.all([
           loadOrdersForRestaurant(store.id),
           loadMessagesForRestaurant(store.id),
           loadWorkersForRestaurant(store.id),
           loadWorkerTimeLogsForRestaurant(store.id),
+          loadAnalyticsEventsForRestaurant(store.id),
           loadStoreViewsForRestaurant(store.id),
         ]);
 
@@ -406,6 +495,7 @@ export default function OwnerDashboardPage() {
         setMessages(nextMessages);
         setWorkers(nextWorkers);
         setWorkerTimeLogs(nextTimeLogs);
+        setAnalyticsEvents(nextAnalyticsEvents);
 
         if (dayChanged) {
           currentDay = nextDay;
@@ -435,6 +525,7 @@ export default function OwnerDashboardPage() {
     loadMessagesForRestaurant,
     loadWorkersForRestaurant,
     loadWorkerTimeLogsForRestaurant,
+    loadAnalyticsEventsForRestaurant,
     loadStoreViewsForRestaurant
   ]);
 
@@ -457,7 +548,33 @@ export default function OwnerDashboardPage() {
   }, [store?.id, timeCabinetRange, loadWorkerHistoryLogsForRestaurant]);
 
   async function changeOwnerLanguage(next: Lang) { setLang(next); saveLanguageLocal(next); if (!store?.id) return; const { error } = await supabase.from('restaurants').update({ owner_language: next, order_language: next }).eq('id', store.id); if (error) { setError(error.message); return; } setStore(current => current ? { ...current, owner_language: next, order_language: next } : current); }
-  async function updateOrderStatus(id: string, action: OwnerAction) { try { setUpdatingOrderId(id); setError(''); const next = getNextStatusValue(action); const { error } = await supabase.from('orders').update({ status: next }).eq('id', id); if (error) throw error; setOrders(prev => prev.map(o => o.id === id ? { ...o, status: next } : o)); } catch (err: any) { setError(err?.message || t.updateOrderError); } finally { setUpdatingOrderId(''); } }
+  async function updateOrderStatus(id: string, action: OwnerAction) {
+    const targetOrder = orders.find((order) => order.id === id) || null;
+
+    try {
+      setUpdatingOrderId(id);
+      setError('');
+
+      const next = getNextStatusValue(action);
+      const { error } = await supabase.from('orders').update({ status: next }).eq('id', id);
+
+      if (error) throw error;
+
+      setOrders((prev) => prev.map((order) => (order.id === id ? { ...order, status: next } : order)));
+
+      if ((action === 'accept' || action === 'ready' || action === 'complete') && targetOrder) {
+        const opened = openOwnerSmsToCustomer(targetOrder, storeName, action);
+
+        if (!opened) {
+          setError('Order updated, but no customer phone number was saved for SMS.');
+        }
+      }
+    } catch (err: any) {
+      setError(err?.message || t.updateOrderError);
+    } finally {
+      setUpdatingOrderId('');
+    }
+  }
   async function copyStoreLink() { try { await navigator.clipboard.writeText(storeUrl); setCopied(true); window.setTimeout(() => setCopied(false), 1500); } catch {} }
   async function copyWorkerLogin() { try { await navigator.clipboard.writeText(workerLoginUrl); setWorkerLoginCopied(true); window.setTimeout(() => setWorkerLoginCopied(false), 1500); } catch {} }
   async function handleStripeConnect() { if (!store?.id) return; try { setConnectingStripe(true); setError(''); const res = await fetch('/api/stripe/connect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ restaurantId: store.id }) }); const payload = await res.json().catch(() => ({})); if (!res.ok) throw new Error(payload?.error || t.stripeLinkError); if (payload?.url) { window.location.href = payload.url; return; } throw new Error(t.accountNotReturned); } catch (err: any) { setError(err?.message || t.connectStripeError); } finally { setConnectingStripe(false); } }
@@ -543,6 +660,29 @@ export default function OwnerDashboardPage() {
   const weeklySales = useMemo(() => orders.filter(o => isThisWeek(o.created_at)).reduce((s, o) => s + getOrderAmount(o), 0), [orders]);
   const averageOrderValue = useMemo(() => (!orders.length ? 0 : revenueTotal / orders.length), [orders.length, revenueTotal]);
 
+  const viewAnalyticsEvents = useMemo(() => analyticsEvents.filter(isViewAnalyticsEvent), [analyticsEvents]);
+  const totalTrackedViews = useMemo(() => Math.max(storeViews, viewAnalyticsEvents.length), [storeViews, viewAnalyticsEvents.length]);
+  const todayTrackedViews = useMemo(() => viewAnalyticsEvents.filter(event => isToday(event.created_at)).length, [viewAnalyticsEvents]);
+  const weekTrackedViews = useMemo(() => viewAnalyticsEvents.filter(event => isThisWeek(event.created_at)).length, [viewAnalyticsEvents]);
+  const monthTrackedViews = useMemo(() => viewAnalyticsEvents.filter(event => isThisMonth(event.created_at)).length, [viewAnalyticsEvents]);
+  const conversionRate = useMemo(() => totalTrackedViews > 0 ? (orders.length / totalTrackedViews) * 100 : 0, [orders.length, totalTrackedViews]);
+  const sourceStats = useMemo(() => {
+    const map = new Map<string, number>();
+    viewAnalyticsEvents.forEach(event => {
+      const source = normalizeAnalyticsSource(event.source);
+      map.set(source, (map.get(source) || 0) + 1);
+    });
+    if (!map.size && totalTrackedViews > 0) map.set('direct', totalTrackedViews);
+    return Array.from(map.entries()).map(([source, count]) => ({ source, label: prettyAnalyticsSource(source), count })).sort((a, b) => b.count - a.count);
+  }, [totalTrackedViews, viewAnalyticsEvents]);
+  const topTrafficSource = useMemo(() => sourceStats[0]?.label || 'Direct', [sourceStats]);
+  const analyticsBarsMax = useMemo(() => Math.max(1, ...sourceStats.map(item => item.count)), [sourceStats]);
+  const viewsVsOrders = useMemo(() => [
+    { label: 'Views', value: totalTrackedViews },
+    { label: 'Orders', value: orders.length },
+  ], [orders.length, totalTrackedViews]);
+
+
   const salesSeries = useMemo(() => { const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']; const cur = new Date(), day = cur.getDay(), off = (day + 6) % 7, start = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() - off); return labels.map((label, i) => { const ds = new Date(start); ds.setDate(start.getDate() + i); const de = new Date(ds); de.setDate(ds.getDate() + 1); const total = orders.reduce((sum, o) => { if (!o.created_at) return sum; const d = new Date(o.created_at); return d >= ds && d < de ? sum + getOrderAmount(o) : sum; }, 0); return { label, total }; }); }, [orders]);
   const chartMax = useMemo(() => Math.max(600, Math.ceil((Math.max(...salesSeries.map(i => i.total), 0) + 100) / 100) * 100), [salesSeries]);
   const chartPoints = useMemo(() => salesSeries.map((p, i) => ({ x: 36 + i * 78, y: 180 - (p.total / chartMax) * 132, total: p.total, label: p.label })), [salesSeries, chartMax]);
@@ -572,6 +712,7 @@ export default function OwnerDashboardPage() {
     if (target === 'support') scrollToSupport('support');
     if (target === 'workers') scrollToRef(workersRef, 'workers');
     if (target === 'timecabinet') scrollToRef(timeCabinetRef, 'timecabinet');
+    if (target === 'analytics') scrollToRef(analyticsRef, 'analytics');
     if (target === 'more') scrollToRef(storefrontRef, 'more');
   };
 
@@ -690,16 +831,65 @@ export default function OwnerDashboardPage() {
     </div>
   </section>;
 
+
+  const renderAnalyticsPanel = (desktop = false) => <section ref={analyticsRef} className={desktop ? 'panel ownerAnalyticsPanel desktopOwnerAnalyticsPanel' : 'mobileWhitePanel ownerAnalyticsPanel'}>
+    <div className="analyticsTop">
+      <div>
+        <h3>{t.analytics}</h3>
+        <p className="sectionSub">Live store traffic, source tracking, and views-to-orders performance.</p>
+      </div>
+      <span className="analyticsLivePill"><i /> Live</span>
+    </div>
+
+    <div className="analyticsMetricGrid">
+      <article><span>Total Views</span><strong>{totalTrackedViews.toLocaleString()}</strong><small>All-time tracked store traffic</small></article>
+      <article><span>Today Views</span><strong>{todayTrackedViews.toLocaleString()}</strong><small>Real-time today</small></article>
+      <article><span>This Week</span><strong>{weekTrackedViews.toLocaleString()}</strong><small>Monday through today</small></article>
+      <article><span>This Month</span><strong>{monthTrackedViews.toLocaleString()}</strong><small>Current month</small></article>
+    </div>
+
+    <div className="analyticsPerformanceGrid">
+      <article>
+        <span>Conversion Rate</span>
+        <strong>{formatPercent(conversionRate)}</strong>
+        <small>{orders.length.toLocaleString()} orders from {totalTrackedViews.toLocaleString()} views</small>
+      </article>
+      <article>
+        <span>Top Source</span>
+        <strong>{topTrafficSource}</strong>
+        <small>Best traffic channel right now</small>
+      </article>
+      <article>
+        <span>Avg Order</span>
+        <strong>{formatMoney(averageOrderValue)}</strong>
+        <small>Average customer order value</small>
+      </article>
+    </div>
+
+    <div className="analyticsSplitGrid">
+      <div className="analyticsSourceCard">
+        <div className="analyticsCardHead"><strong>Traffic Sources</strong><span>{sourceStats.length || 1}</span></div>
+        <div className="analyticsSourceList">
+          {sourceStats.length ? sourceStats.slice(0, 8).map(item => <div key={item.source} className="analyticsSourceRow"><div><b>{item.label}</b><small>{item.count.toLocaleString()} visits</small></div><span><i style={{ width: `${Math.max(8, Math.round((item.count / analyticsBarsMax) * 100))}%` }} /></span></div>) : <div className="emptyBox">No traffic source data yet.</div>}
+        </div>
+      </div>
+      <div className="analyticsSourceCard">
+        <div className="analyticsCardHead"><strong>Views vs Orders</strong><span>{formatPercent(conversionRate)}</span></div>
+        <div className="analyticsCompareList">
+          {viewsVsOrders.map(item => <div key={item.label} className="analyticsCompareRow"><span>{item.label}</span><strong>{item.value.toLocaleString()}</strong><em><i style={{ width: `${Math.max(8, Math.round((item.value / Math.max(1, totalTrackedViews)) * 100))}%` }} /></em></div>)}
+        </div>
+      </div>
+    </div>
+  </section>;
+
   const renderSupportPanel = (desktop = false) => <section ref={desktop ? desktopSupportRef : mobileSupportRef} className={desktop ? 'panel supportPanel desktopSupportPanel' : 'mobileWhitePanel supportPanel'}><h3>{t.supportTitle}</h3><p className={desktop ? 'sectionSub' : ''}>{t.supportSub}</p><div className={desktop ? 'supportInputs desktopSupportInputs' : 'supportInputs'}><input value={supportSubject} onChange={(e: any) => setSupportSubject(e.target.value)} onFocus={() => setMobileMenuOpen(false)} placeholder={t.supportSubject} autoComplete="off" /><textarea value={supportMessage} onChange={(e: any) => setSupportMessage(e.target.value)} onFocus={() => setMobileMenuOpen(false)} placeholder={t.supportMessage} autoComplete="off" /></div>{supportSuccess ? <div className="supportSuccess">{t.supportSent}</div> : null}<button type="button" className={desktop ? 'linea supportSendBtn' : 'fullBlackBtn'} disabled={sendingSupport} onClick={sendSupportMessage}>{sendingSupport ? t.supportSending : t.supportSend}</button><div className="messageThread"><div className="messageThreadTop"><strong>{t.messages}</strong><span>{messages.length}</span></div>{messages.length ? messages.slice(0, 6).map(m => <article key={m.id} className={`messageBubble ${m.read_by_owner === false ? 'unread' : ''}`}><div><b>{m.subject || t.ownerMessage}</b><small>{m.created_at ? minutesAgo(m.created_at, t) : ''}</small></div><p>{m.message}</p>{m.admin_reply || m.reply ? <div className="adminReply"><strong>{t.adminReply}</strong><p>{m.admin_reply || m.reply}</p></div> : null}</article>) : <div className="emptyBox">{t.noMessages}</div>}</div></section>;
 
   if (loading) return <main className="ownerDashboardLoading"><div className="loadingCard">{t.loading}</div><style jsx global>{dashboardStyles}</style></main>;
 
-  if (store && !agreementAccepted) return <main className="ownerAgreementPage"><section className="agreementCard"><img src="/orda-logo.png" alt="ORDA" /><small>OWNER DASHBOARD ACCESS</small><h1>{t.termsTitle}</h1><p>{t.termsSubtitle}</p>{error ? <div className="agreementError">{error}</div> : null}<div className="agreementList"><span>1</span><p>{t.terms1}</p><span>2</span><p>{t.terms2}</p><span>3</span><p>{t.terms3}</p><span>4</span><p>{t.terms4}</p><span>5</span><p>{t.terms5}</p></div><label className="agreementCheck"><input type="checkbox" checked={agreementChecked} onChange={(e: any) => setAgreementChecked(e.target.checked)} /><b>{t.termsCheck}</b></label><button type="button" className="agreementButton" disabled={acceptingAgreement} onClick={acceptAgreement}>{acceptingAgreement ? t.termsAccepting : t.termsAccept}</button><div className="agreementLang"><button type="button" className={lang === 'en' ? 'active' : ''} onClick={() => changeOwnerLanguage('en')}>EN</button><button type="button" className={lang === 'es' ? 'active' : ''} onClick={() => changeOwnerLanguage('es')}>ES</button></div></section><style jsx global>{dashboardStyles}</style></main>;
-
   return <main className="ownerPage">
     <div className="mobileFrame" ref={topRef}>
       <header className="mobileTopbar"><button type="button" className="hamburgerBtn" onClick={() => setMobileMenuOpen(o => !o)} aria-label="Open menu"><span /><span /><span /></button><img src="/orda-logo.png" alt="ORDA" className="mobileLogo" /><div className="mobileTopActions"><NotificationBell mobile /><button type="button" className="storeAvatarBtn" onClick={() => window.open(storeUrl, '_blank', 'noopener,noreferrer')}><img src={heroImage} alt={storeName} /></button></div></header>
-      {mobileMenuOpen ? <section className="mobileDrawer"><button type="button" onClick={() => goNav('dashboard')}>{t.dashboard}</button><button type="button" onClick={() => goNav('orders')}>{t.liveOrders}</button><button type="button" onClick={() => goNav('workers')}>{t.workers}</button><button type="button" onClick={() => goNav('timecabinet')}>{t.timeCabinet}</button><button type="button" onClick={() => goNav('support')}>{t.supportTitle}</button><button type="button" onClick={() => goNav('builder')}>{t.menuBuilder}</button><button type="button" onClick={() => goNav('flyers')}>{t.createFlyers}</button><button type="button" onClick={handleStripeConnect}>{stripeState === 'connected' ? t.manageStripe : t.connectStripe}</button><div className="drawerLang"><button type="button" className={lang === 'en' ? 'active' : ''} onClick={() => changeOwnerLanguage('en')}>EN</button><button type="button" className={lang === 'es' ? 'active' : ''} onClick={() => changeOwnerLanguage('es')}>ES</button></div></section> : null}
+      {mobileMenuOpen ? <section className="mobileDrawer"><button type="button" onClick={() => goNav('dashboard')}>{t.dashboard}</button><button type="button" onClick={() => goNav('orders')}>{t.liveOrders}</button><button type="button" onClick={() => goNav('workers')}>{t.workers}</button><button type="button" onClick={() => goNav('timecabinet')}>{t.timeCabinet}</button><button type="button" onClick={() => goNav('analytics')}>{t.analytics}</button><button type="button" onClick={() => goNav('support')}>{t.supportTitle}</button><button type="button" onClick={() => goNav('builder')}>{t.menuBuilder}</button><button type="button" onClick={() => goNav('flyers')}>{t.createFlyers}</button><button type="button" onClick={handleStripeConnect}>{stripeState === 'connected' ? t.manageStripe : t.connectStripe}</button><div className="drawerLang"><button type="button" className={lang === 'en' ? 'active' : ''} onClick={() => changeOwnerLanguage('en')}>EN</button><button type="button" className={lang === 'es' ? 'active' : ''} onClick={() => changeOwnerLanguage('es')}>ES</button></div></section> : null}
       <section className="mobileIntro"><div><h1>{t.welcome}</h1><p>{t.todaySubtitle}</p></div><button type="button" onClick={() => window.open(storeUrl, '_blank', 'noopener,noreferrer')}>{t.viewStore} <span>↗</span></button></section>
       {error ? <div className="mobileError">{error}</div> : null}
       <section className="storeHeroCard" style={{ backgroundImage: `linear-gradient(90deg, rgba(255,255,255,.98) 0%, rgba(255,255,255,.78) 47%, rgba(255,255,255,.12) 100%), url(${heroImage})` }}><div className="storeHeroContent"><h2>{storeName} <span>✓</span></h2><div className="storeLivePill"><i /> {t.storeLive}</div><p>🔗 {cleanDisplayUrl(storeUrl)}</p><p>◷ {t.openUntil}</p></div><button type="button" className="editStoreBtn" onClick={() => router.push('/dashboard/owner/builder')}>✎ {t.editStore}</button></section>
@@ -751,16 +941,17 @@ export default function OwnerDashboardPage() {
 </section>
       <section className="mobileChartCard"><div className="chartTopMobile"><h2>{t.salesOverview}</h2><button type="button" onClick={() => router.push('/dashboard/owner/analytics')}>{t.viewFullAnalytics} ›</button></div><strong>{formatMoney(weeklySales)}</strong><em>{weeklySales ? t.thisWeekActive : t.noWeeklySales}</em><svg viewBox="0 0 570 216" className="mobileSalesChart" preserveAspectRatio="none"><defs><linearGradient id="ownerMobileArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#111827" stopOpacity="0.18" /><stop offset="100%" stopColor="#111827" stopOpacity="0.02" /></linearGradient></defs><path d={areaPath} fill="url(#ownerMobileArea)" /><path d={chartPath || 'M 36 180 L 114 120 L 192 150 L 270 90 L 348 130 L 426 80 L 504 110'} fill="none" stroke="#050505" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />{chartPoints.map(p => <circle key={p.label} cx={p.x} cy={p.y} r="5" fill="#050505" />)}</svg><div className="mobileChartLabels">{salesSeries.map(p => <span key={p.label}>{p.label}</span>)}</div></section>
       <section className="mobileLiveOrders" ref={liveOrdersRef}><div className="sectionTitleRow"><h2>{t.liveOrders} <b>{newOrdersCount}</b></h2><button type="button" onClick={() => setOrderFilter('ALL')}>{t.viewAllOrders} ›</button></div>{firstTwoOrders.length ? firstTwoOrders.map(order => { const primaryAction = getPrimaryAction(order.status, t); return <article className="mobileOrderCard" key={order.id}><img src={getOrderImage(order, menuItems)} alt="Order" /><div className="mobileOrderInfo"><strong>#ORD-{order.id.slice(0, 4).toUpperCase()}</strong><span>{order.created_at ? new Date(order.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '--'}</span><em>{normalizeOrderItemsSummary(order, t)} • {formatMoney(getOrderAmount(order))}</em></div><span className={getStatusBadgeClass(order.status)}>{getStatusLabel(order.status, t)}</span>{primaryAction ? <button type="button" className="acceptMobile" disabled={updatingOrderId === order.id} onClick={() => updateOrderStatus(order.id, primaryAction.action)}>{updatingOrderId === order.id ? t.updating : primaryAction.label}</button> : <button type="button" className="acceptMobile">{t.viewDetails}</button>}</article>; }) : <div className="emptyMobile">{t.noOrdersYet}</div>}</section>
+      {renderAnalyticsPanel()}
       <section className="mobileQuickActions"><h2>{t.quickActions}</h2><div className="mobileActionGrid"><button type="button" style={{ backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.82), rgba(0,0,0,.48)), url(${heroImage})` }} onClick={() => router.push('/dashboard/owner/builder')}><MobileIcon name="builder" /><strong>{t.buildMenu}</strong><span>{t.editMenu}</span><b>›</b></button><button type="button" style={{ backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.82), rgba(0,0,0,.48)), url(${getOrderImage(orders[0] || {} as OrderRow, menuItems)})` }} onClick={() => scrollToRef(liveOrdersRef, 'orders')}><MobileIcon name="live" /><strong>{t.liveOrders}</strong><span>{t.manageIncoming}</span><b>›</b></button><button type="button" style={{ backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.82), rgba(0,0,0,.48)), url(${heroImage})` }} onClick={() => scrollToRef(workersRef, 'workers')}><MobileIcon name="workers" /><strong>{t.workers}</strong><span>{t.manageStaff}</span><b>›</b></button><button type="button" style={{ backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.82), rgba(0,0,0,.48)), url(${heroImage})` }} onClick={() => scrollToRef(timeCabinetRef, 'timecabinet')}><MobileIcon name="analytics" /><strong>{t.timeCabinet}</strong><span>{t.workerHistory}</span><b>›</b></button><button type="button" style={{ backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.82), rgba(0,0,0,.48)), url(${flyerImage})` }} onClick={() => router.push('/dashboard/owner/flyers')}><MobileIcon name="flyers" /><strong>{t.createFlyers}</strong><span>{t.promoteStore}</span><b>›</b></button><button type="button" style={{ backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.82), rgba(0,0,0,.48)), url(${heroImage})` }} onClick={() => router.push('/dashboard/owner/promos')}><MobileIcon name="promos" /><strong>{t.promos}</strong><span>{t.promoteStore}</span><b>›</b></button><button type="button" style={{ backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.82), rgba(0,0,0,.48)), url(${flyerImage})` }} onClick={() => router.push('/dashboard/owner/rewards')}><MobileIcon name="rewards" /><strong>{t.rewards}</strong><span>Loyalty program</span><b>›</b></button></div></section>
       <section className="mobileExtraStack">{renderWorkersPanel()}{renderTimeCabinetPanel()}<section className="mobileWhitePanel"><h3>{t.storeStatus}</h3><p><i className="greenDotMini" /> {t.liveOnline}</p><div className="statusMiniGrid"><span>{t.account}<b>{getStripeStatusLabel(store, 'account', t)}</b></span><span>{t.charges}<b>{getStripeStatusLabel(store, 'charges', t)}</b></span><span>{t.payouts}<b>{getStripeStatusLabel(store, 'payouts', t)}</b></span></div><button type="button" className="fullBlackBtn" onClick={handleStripeConnect} disabled={connectingStripe}>{stripeState === 'connected' ? t.manageStripe : t.connectStripe}</button></section><section className="mobileWhitePanel" ref={customersRef}><h3>{t.customers}</h3><div className="customerMiniStats"><span>{t.uniqueCustomers}<b>{uniqueCustomers.length}</b></span><span>{t.totalOrders}<b>{orders.length}</b></span></div></section><section className="mobileWhitePanel" ref={storefrontRef}><h3>{t.storefrontLink}</h3><p>{cleanDisplayUrl(storeUrl)}</p><button type="button" className="fullBlackBtn" onClick={copyStoreLink}>{copied ? t.copied : t.copy} {t.shareStore}</button></section>{renderSupportPanel()}</section>
-      <nav className="mobileBottomNav"><button type="button" className={activeNav === 'dashboard' ? 'active' : ''} onClick={() => goNav('dashboard')}><MobileIcon name="dashboard" /><em>{t.dashboard}</em></button><button type="button" className={activeNav === 'orders' ? 'active' : ''} onClick={() => goNav('orders')}><MobileIcon name="orders" />{newOrdersCount > 0 ? <b>{newOrdersCount}</b> : null}<em>Orders</em></button><button type="button" className={activeNav === 'workers' ? 'active' : ''} onClick={() => goNav('workers')}><MobileIcon name="workers" /><em>{t.workers}</em></button><button type="button" className={activeNav === 'timecabinet' ? 'active' : ''} onClick={() => goNav('timecabinet')}><MobileIcon name="analytics" /><em>{t.timeCabinet}</em></button><button type="button" className={activeNav === 'builder' ? 'active' : ''} onClick={() => goNav('builder')}><MobileIcon name="builder" /><em>{t.menuBuilder}</em></button><button type="button" className={activeNav === 'support' ? 'active' : ''} onClick={() => goNav('support')}><MobileIcon name="promos" />{unreadMessagesCount > 0 ? <b>{unreadMessagesCount}</b> : null}<em>Support</em></button></nav>
+      <nav className="mobileBottomNav"><button type="button" className={activeNav === 'dashboard' ? 'active' : ''} onClick={() => goNav('dashboard')}><MobileIcon name="dashboard" /><em>{t.dashboard}</em></button><button type="button" className={activeNav === 'orders' ? 'active' : ''} onClick={() => goNav('orders')}><MobileIcon name="orders" />{newOrdersCount > 0 ? <b>{newOrdersCount}</b> : null}<em>Orders</em></button><button type="button" className={activeNav === 'workers' ? 'active' : ''} onClick={() => goNav('workers')}><MobileIcon name="workers" /><em>{t.workers}</em></button><button type="button" className={activeNav === 'timecabinet' ? 'active' : ''} onClick={() => goNav('timecabinet')}><MobileIcon name="analytics" /><em>{t.timeCabinet}</em></button><button type="button" className={activeNav === 'analytics' ? 'active' : ''} onClick={() => goNav('analytics')}><MobileIcon name="views" /><em>{t.analytics}</em></button><button type="button" className={activeNav === 'builder' ? 'active' : ''} onClick={() => goNav('builder')}><MobileIcon name="builder" /><em>{t.menuBuilder}</em></button><button type="button" className={activeNav === 'support' ? 'active' : ''} onClick={() => goNav('support')}><MobileIcon name="promos" />{unreadMessagesCount > 0 ? <b>{unreadMessagesCount}</b> : null}<em>Support</em></button></nav>
     </div>
 
     <div className="desktopShell"><aside className="sidebar"><div className="brandBlock"><img src="/orda-logo.png" alt="ORDA Owner Panel" className="brandOwnerLogo" /></div><nav className="navList"><button type="button" className="navBtn active" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}><span className="navGlyph">▦</span><span>{t.dashboard}</span></button><button type="button" className="navBtn" onClick={() => router.push('/dashboard/owner/builder')}><span className="navGlyph">⚙</span><span>{t.storeSettings}</span></button><button type="button" className="navBtn" onClick={() => scrollToRef(workersRef, 'workers')}><span className="navGlyph">☷</span><span>{t.workers}</span>{activeWorkersCount > 0 ? <span className="navCount">{activeWorkersCount}</span> : null}</button><button type="button" className="navBtn" onClick={() => scrollToRef(timeCabinetRef, 'timecabinet')}><span className="navGlyph">▤</span><span>{t.timeCabinet}</span></button><button type="button" className="navBtn" onClick={() => router.push('/dashboard/owner/rewards')}><span className="navGlyph">★</span><span>{t.rewards}</span></button><button type="button" className="navBtn" onClick={() => router.push('/dashboard/owner/campaigns')}><span className="navGlyph">✉</span><span>{t.smsCampaigns}</span></button><button type="button" className="navBtn" onClick={() => router.push('/dashboard/owner/analytics')}><span className="navGlyph">◔</span><span>{t.analytics}</span></button><button type="button" className="navBtn" onClick={() => router.push('/dashboard/owner/customers')}><span className="navGlyph">◎</span><span>{t.customerCrm}</span></button><button type="button" className="navBtn" onClick={() => router.push('/dashboard/owner/promos')}><span className="navGlyph">%</span><span>{t.promos}</span></button><button type="button" className="navBtn" onClick={() => scrollToRef(liveOrdersRef)}><span className="navGlyph">☰</span><span>{t.liveOrders}</span>{newOrdersCount > 0 ? <span className="navCount">{newOrdersCount}</span> : null}</button><button type="button" className="navBtn" onClick={() => scrollToSupport()}><span className="navGlyph">✉</span><span>{t.supportTitle}</span>{unreadMessagesCount > 0 ? <span className="navCount">{unreadMessagesCount}</span> : null}</button><button type="button" className="navBtn" onClick={handleStripeConnect} disabled={connectingStripe}><span className="navGlyph">◫</span><span>{stripeState === 'connected' ? t.stripeConnected : t.connectStripe}</span></button><button type="button" className="navBtn" onClick={() => router.push('/dashboard/owner/flyers')}><span className="navGlyph">⚑</span><span>{t.marketing}</span><span className="newPill">{t.new}</span></button></nav><div className="sidebarStoreCard"><div className="storeCardTop"><img src={logoImage || '/orda-logo.png'} alt={storeName} className="storeThumbImage" /><div className="storeCardInfo"><div className="storeCardName">{storeName}</div><div className="liveMiniPill">{t.live}</div><div className="storeCardPlan">{store?.plan || 'Starter Plan'}</div></div></div><button type="button" className="linea sidebarFullBtn" onClick={() => window.open(storeUrl, '_blank', 'noopener,noreferrer')}>{t.openStorefront} <span>↗</span></button></div></aside>
       <section className="mainArea"><header className="heroRow"><div className="heroCopy"><div className="welcomeLine">{t.welcome}, {storeName}</div><h1>{t.storeLive}<span className="heroLiveDot" /></h1><p>{formatClock(now)} • {formatDayDate(now)}</p></div><div className="heroTools"><div className="headerSearch"><span className="headerSearchIcon">⌕</span><input value={search} onChange={(e: any) => setSearch(e.target.value)} placeholder={t.searchPlaceholder} /></div><div className="languageBox"><small>{t.language}</small><div><button type="button" className={lang === 'en' ? 'active' : ''} onClick={() => changeOwnerLanguage('en')}>EN</button><button type="button" className={lang === 'es' ? 'active' : ''} onClick={() => changeOwnerLanguage('es')}>ES</button></div></div><NotificationBell /><button type="button" className="lightBtn" onClick={() => router.push('/dashboard/owner/builder')}>{t.openBuilder}</button><button type="button" className="linea" onClick={() => window.open(storeUrl, '_blank', 'noopener,noreferrer')}>{t.viewStore} <span>→</span></button></div></header>
       {error ? <div className="errorBanner">{error}</div> : null}
       <div className="kpiGrid premiumKpiGrid"><section className="kpiCard premiumKpiCard"><div className="premiumKpiPhoto"><img src="https://images.unsplash.com/photo-1580519542036-c47de6196ba5?auto=format&fit=crop&w=500&q=85" alt="Money and sales" /></div><div className="premiumKpiText"><div className="kpiLabel">{t.todaysSales}</div><div className="kpiValue">{formatMoney(todaysSales)}</div><div className="kpiMeta greenText">{todaysOrders ? t.liveToday : t.noOrdersToday}</div></div></section><section className="kpiCard premiumKpiCard"><div className="premiumKpiPhoto"><img src="https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=500&q=85" alt="Workers helping customers" /></div><div className="premiumKpiText"><div className="kpiLabel">{t.workers}</div><div className="kpiValue">{activeWorkersCount}</div><div className="kpiMeta greenText">{t.staffAccess}</div></div></section><section className="kpiCard premiumKpiCard"><div className="premiumKpiPhoto"><img src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=500&q=85" alt="Customer orders" /></div><div className="premiumKpiText"><div className="kpiLabel">{t.newOrders}</div><div className="kpiValue">{newOrdersCount}</div><div className="kpiMeta redText">{newOrdersCount ? t.needsAction : t.noNewOrders}</div></div></section><section className="kpiCard premiumKpiCard"><div className="premiumKpiPhoto"><img src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=500&q=85" alt="Messages and support" /></div><div className="premiumKpiText"><div className="kpiLabel">{t.unreadMessages}</div><div className="kpiValue">{unreadMessagesCount}</div><div className="kpiMeta greenText">{messages.length ? t.messages : t.noMessages}</div></div></section></div>
-      <div className="contentGrid"><div className="primaryColumn"><section className="panel liveOrdersPanel" ref={liveOrdersRef}><div className="panelTop"><div className="panelTitleWrap"><h2>{t.liveOrders}</h2>{newOrdersCount > 0 ? <span className="newOrdersBadge">{newOrdersCount} {t.new}</span> : null}</div><button type="button" className="linkBtn" onClick={() => setOrderFilter('ALL')}>{t.viewAllOrders}</button></div><div className="filters">{([['ALL', t.all, orders.length], ['NEW', t.new, newOrdersCount], ['IN_PROGRESS', t.inProgress, inProgressCount], ['READY', t.almostReady, readyCount], ['DONE', t.completed, completedCount]] as [OrderFilterKey, string, number][]).map(([filter, label, count]) => <button key={filter} type="button" className={`filterChip ${orderFilter === filter ? 'active' : ''}`} onClick={() => setOrderFilter(filter)}><span>{label}</span><strong>{count}</strong></button>)}</div><div className="ordersTable">{filteredOrders.length ? filteredOrders.slice(0, 20).map(order => { const primaryAction = getPrimaryAction(order.status, t); const statusKey = getStatusKey(order.status); return <article key={order.id} className={`orderCard ${statusKey}`}><div className="orderIdBlock"><div className="orderCode">#{order.id.slice(0, 5).toUpperCase()}</div><div className="orderAgoText">{minutesAgo(order.created_at, t)}</div></div><div className="avatar">{getInitials(order.customer_name)}</div><div className="orderCustomerBlock"><div className="orderCustomerName">{order.customer_name || t.customer}</div><div className="orderCustomerPhone">{order.customer_phone || store?.phone || t.noPhone}</div></div><div className="orderItemsBlock"><div className="orderItemsText">{normalizeOrderItemsSummary(order, t)}</div></div><div className="orderAmountBlock"><div className="orderAmount">{formatMoney(getOrderAmount(order))}</div></div><div className="orderStatusBlock"><span className={getStatusBadgeClass(order.status)}>{getStatusLabel(order.status, t)}</span></div><div className="orderActionsBlock">{primaryAction ? <button type="button" className="linea rowBtn" disabled={updatingOrderId === order.id} onClick={() => updateOrderStatus(order.id, primaryAction.action)}>{updatingOrderId === order.id ? t.updating : primaryAction.label}</button> : <button type="button" className="lightLineBtn rowBtn" onClick={() => setSearch(order.customer_name || '')}>{t.viewDetails}</button>}{statusKey !== 'completed' && statusKey !== 'cancelled' ? <button type="button" className="lightLineBtn rowBtn" disabled={updatingOrderId === order.id} onClick={() => updateOrderStatus(order.id, 'cancel')}>{statusKey === 'new' ? t.decline : t.cancel}</button> : null}</div></article>; }) : <div className="emptyBox">{t.noOrdersYet}</div>}</div></section><section className="panel salesPanel"><div className="salesPanelTop"><div><h3>{t.salesOverview}</h3><div className="salesBigRow"><strong>{formatMoney(revenueTotal)}</strong><span>{t.weeklyLiveView}</span></div></div><button type="button" className="selectorBtn">{t.thisWeek}</button></div><div className="chartShell"><div className="chartYAxis"><span>${Math.round(chartMax)}</span><span>${Math.round(chartMax * .66)}</span><span>${Math.round(chartMax * .33)}</span><span>$0</span></div><div className="chartArea"><svg viewBox="0 0 570 216" preserveAspectRatio="none" className="chartSvg"><defs><linearGradient id="desktopArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#111827" stopOpacity="0.16" /><stop offset="100%" stopColor="#111827" stopOpacity="0.02" /></linearGradient></defs><path d={areaPath} fill="url(#desktopArea)" /><path d={chartPath} fill="none" stroke="#111827" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />{chartPoints.map(p => <circle key={p.label} cx={p.x} cy={p.y} r="5" fill="#111827" />)}</svg><div className="chartDays">{salesSeries.map(p => <span key={p.label}>{p.label}</span>)}</div></div></div></section></div>
+      <div className="contentGrid"><div className="primaryColumn">{renderAnalyticsPanel(true)}<section className="panel liveOrdersPanel" ref={liveOrdersRef}><div className="panelTop"><div className="panelTitleWrap"><h2>{t.liveOrders}</h2>{newOrdersCount > 0 ? <span className="newOrdersBadge">{newOrdersCount} {t.new}</span> : null}</div><button type="button" className="linkBtn" onClick={() => setOrderFilter('ALL')}>{t.viewAllOrders}</button></div><div className="filters">{([['ALL', t.all, orders.length], ['NEW', t.new, newOrdersCount], ['IN_PROGRESS', t.inProgress, inProgressCount], ['READY', t.almostReady, readyCount], ['DONE', t.completed, completedCount]] as [OrderFilterKey, string, number][]).map(([filter, label, count]) => <button key={filter} type="button" className={`filterChip ${orderFilter === filter ? 'active' : ''}`} onClick={() => setOrderFilter(filter)}><span>{label}</span><strong>{count}</strong></button>)}</div><div className="ordersTable">{filteredOrders.length ? filteredOrders.slice(0, 20).map(order => { const primaryAction = getPrimaryAction(order.status, t); const statusKey = getStatusKey(order.status); return <article key={order.id} className={`orderCard ${statusKey}`}><div className="orderIdBlock"><div className="orderCode">#{order.id.slice(0, 5).toUpperCase()}</div><div className="orderAgoText">{minutesAgo(order.created_at, t)}</div></div><div className="avatar">{getInitials(order.customer_name)}</div><div className="orderCustomerBlock"><div className="orderCustomerName">{order.customer_name || t.customer}</div><div className="orderCustomerPhone">{order.customer_phone || store?.phone || t.noPhone}</div></div><div className="orderItemsBlock"><div className="orderItemsText">{normalizeOrderItemsSummary(order, t)}</div></div><div className="orderAmountBlock"><div className="orderAmount">{formatMoney(getOrderAmount(order))}</div></div><div className="orderStatusBlock"><span className={getStatusBadgeClass(order.status)}>{getStatusLabel(order.status, t)}</span></div><div className="orderActionsBlock">{primaryAction ? <button type="button" className="linea rowBtn" disabled={updatingOrderId === order.id} onClick={() => updateOrderStatus(order.id, primaryAction.action)}>{updatingOrderId === order.id ? t.updating : primaryAction.label}</button> : <button type="button" className="lightLineBtn rowBtn" onClick={() => setSearch(order.customer_name || '')}>{t.viewDetails}</button>}{statusKey !== 'completed' && statusKey !== 'cancelled' ? <button type="button" className="lightLineBtn rowBtn" disabled={updatingOrderId === order.id} onClick={() => updateOrderStatus(order.id, 'cancel')}>{statusKey === 'new' ? t.decline : t.cancel}</button> : null}</div></article>; }) : <div className="emptyBox">{t.noOrdersYet}</div>}</div></section><section className="panel salesPanel"><div className="salesPanelTop"><div><h3>{t.salesOverview}</h3><div className="salesBigRow"><strong>{formatMoney(revenueTotal)}</strong><span>{t.weeklyLiveView}</span></div></div><button type="button" className="selectorBtn">{t.thisWeek}</button></div><div className="chartShell"><div className="chartYAxis"><span>${Math.round(chartMax)}</span><span>${Math.round(chartMax * .66)}</span><span>${Math.round(chartMax * .33)}</span><span>$0</span></div><div className="chartArea"><svg viewBox="0 0 570 216" preserveAspectRatio="none" className="chartSvg"><defs><linearGradient id="desktopArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#111827" stopOpacity="0.16" /><stop offset="100%" stopColor="#111827" stopOpacity="0.02" /></linearGradient></defs><path d={areaPath} fill="url(#desktopArea)" /><path d={chartPath} fill="none" stroke="#111827" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />{chartPoints.map(p => <circle key={p.label} cx={p.x} cy={p.y} r="5" fill="#111827" />)}</svg><div className="chartDays">{salesSeries.map(p => <span key={p.label}>{p.label}</span>)}</div></div></div></section></div>
       <div className="secondaryColumn">{renderWorkersPanel(true)}{renderTimeCabinetPanel(true)}<section className="panel"><h3>{t.storeStatus}</h3><div className="statusLiveRow"><span className="greenDot" /><span>{t.liveOnline}</span></div><div className="stripeStatusCard"><div className="stripeStatusTop"><strong>{t.stripeStatus}</strong><button type="button" className="miniManageBtn" onClick={handleStripeConnect} disabled={connectingStripe}>{stripeState === 'connected' ? t.manageStripe : stripeState === 'incomplete' ? t.finishSetup : t.connect}</button></div><div className="stripeStatusRows">{(['account', 'charges', 'payouts'] as const).map(type => <div className="stripeStatusRow" key={type}><span>{type === 'account' ? t.account : type === 'charges' ? t.charges : t.payouts}</span><strong>{getStripeStatusLabel(store, type, t)}</strong></div>)}</div></div></section><section className="promoFlyerCard"><div className="promoFlyerText"><h3>{t.boostSales}</h3><p>{t.flyerText}</p><button type="button" className="linea promoCreateBtn" onClick={() => router.push('/dashboard/owner/flyers')}>{t.createFlyers}</button></div><button type="button" className="promoVisual flyerPreviewButton" onClick={() => router.push('/dashboard/owner/flyers')}><img src={flyerImage} alt="ORDA flyer preview" className="promoFlyerImage" /></button></section><section className="panel promoToolsPanel"><h3>{t.promos} & {t.rewards}</h3><p className="sectionSub">Create promos, rewards, and customer offers from the owner dashboard.</p><div className="promoToolsGrid"><button type="button" className="lightLineBtn rowBtn" onClick={() => router.push('/dashboard/owner/promos')}>{t.promos}</button><button type="button" className="lightLineBtn rowBtn" onClick={() => router.push('/dashboard/owner/rewards')}>{t.rewards}</button><button type="button" className="lightLineBtn rowBtn" onClick={() => router.push('/dashboard/owner/campaigns')}>{t.smsCampaigns}</button></div></section><section className="panel" ref={customersRef}><h3>{t.customers}</h3><p className="sectionSub">{t.customerActivity}</p><div className="customerSummaryRow"><div className="customerSummaryBox"><span>{t.uniqueCustomers}</span><strong>{uniqueCustomers.length}</strong></div><div className="customerSummaryBox"><span>{t.totalOrders}</span><strong>{orders.length}</strong></div></div></section><section className="panel"><h3>{t.topItems}</h3><div className="topItemsList">{topItems.length ? topItems.map((item, index) => <div key={`${item.name}-${index}`} className="topItemRow"><div className="topItemLeft"><div className="topItemRank">{index + 1}</div><span>{item.name}</span></div><div className="topItemRight"><span>{item.qty} {t.sold}</span><strong>{formatMoney(item.qty * averageOrderValue)}</strong></div></div>) : <div className="emptyBox">{t.noTopItems}</div>}</div></section>{renderSupportPanel(true)}</div></div></section></div><style jsx global>{dashboardStyles}</style></main>;
 }
 
@@ -950,5 +1141,9 @@ const dashboardStyles = `
     font-size:12px!important;
   }
 }
+
+
+/* ORDA Owner Store Analytics */
+.ownerAnalyticsPanel{scroll-margin-top:96px!important;overflow:hidden!important}.analyticsTop{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:16px}.analyticsTop h3{margin:0;font-size:22px;font-weight:1000;color:#0f172a}.analyticsLivePill{height:32px;border-radius:999px;padding:0 12px;display:inline-flex;align-items:center;gap:7px;background:#dcfce7;color:#166534;font-size:12px;font-weight:1000;text-transform:uppercase;letter-spacing:.06em}.analyticsLivePill i{width:8px;height:8px;border-radius:999px;background:#22c55e;box-shadow:0 0 0 6px rgba(34,197,94,.12)}.analyticsMetricGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.analyticsMetricGrid article,.analyticsPerformanceGrid article{border:1px solid #e5e7eb;background:linear-gradient(180deg,#fff,#f8fafc);border-radius:18px;padding:15px;box-shadow:0 10px 24px rgba(15,23,42,.045)}.analyticsMetricGrid span,.analyticsPerformanceGrid span{display:block;color:#64748b;font-size:11px;font-weight:1000;text-transform:uppercase;letter-spacing:.09em}.analyticsMetricGrid strong,.analyticsPerformanceGrid strong{display:block;margin-top:7px;color:#0f172a;font-size:26px;font-weight:1000;letter-spacing:-.04em}.analyticsMetricGrid small,.analyticsPerformanceGrid small{display:block;margin-top:6px;color:#64748b;font-size:12px;font-weight:850;line-height:1.3}.analyticsPerformanceGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}.analyticsSplitGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.analyticsSourceCard{border:1px solid #e5e7eb;background:#fff;border-radius:20px;padding:15px;box-shadow:0 10px 24px rgba(15,23,42,.045)}.analyticsCardHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.analyticsCardHead strong{font-size:14px;font-weight:1000;color:#0f172a}.analyticsCardHead span{height:26px;border-radius:999px;background:#0f172a;color:#fff;padding:0 9px;display:inline-flex;align-items:center;font-size:12px;font-weight:950}.analyticsSourceList,.analyticsCompareList{display:grid;gap:10px}.analyticsSourceRow{display:grid;grid-template-columns:minmax(0,.9fr) minmax(110px,1fr);gap:12px;align-items:center}.analyticsSourceRow b{display:block;font-size:13px;font-weight:1000;color:#111827}.analyticsSourceRow small{display:block;margin-top:3px;font-size:12px;font-weight:850;color:#64748b}.analyticsSourceRow span,.analyticsCompareRow em{height:10px;border-radius:999px;background:#e5e7eb;overflow:hidden;display:block}.analyticsSourceRow i,.analyticsCompareRow i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#111827,#64748b)}.analyticsCompareRow{display:grid;grid-template-columns:76px 64px minmax(0,1fr);gap:10px;align-items:center}.analyticsCompareRow span{font-size:13px;font-weight:1000;color:#64748b}.analyticsCompareRow strong{font-size:15px;font-weight:1000;color:#0f172a;text-align:right}@media(max-width:900px){.analyticsMetricGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.analyticsPerformanceGrid,.analyticsSplitGrid{grid-template-columns:1fr}.analyticsMetricGrid strong,.analyticsPerformanceGrid strong{font-size:24px}.analyticsSourceRow{grid-template-columns:1fr}.analyticsCompareRow{grid-template-columns:70px 56px 1fr}}
 
 `;

@@ -28,13 +28,13 @@ const PLAN_CONFIG: Record<string, {
     name: 'Growth',
     priceEnv: 'STRIPE_PRICE_GROWTH_MONTHLY',
     monthlyPrice: 49,
-    platformFeePercent: 5,
+    platformFeePercent: 7,
   },
   premium: {
     name: 'Premium',
     priceEnv: 'STRIPE_PRICE_PREMIUM_MONTHLY',
     monthlyPrice: 99,
-    platformFeePercent: 3,
+    platformFeePercent: 5,
   },
 };
 

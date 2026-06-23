@@ -26,6 +26,14 @@ type CartItem = {
   selections?: unknown;
 };
 
+type RestaurantPaymentRow = {
+  id: string;
+  stripe_account_id?: string | null;
+  platform_fee_percent?: number | string | null;
+  plan_key?: string | null;
+  plan_name?: string | null;
+};
+
 function safeText(value: unknown, fallback = '') {
   const clean = String(value || '').trim();
   return clean || fallback;
@@ -45,6 +53,26 @@ function safeStripeImage(value: unknown) {
   if (!url) return '';
   if (!/^https:\/\//i.test(url)) return '';
   return url;
+}
+
+function getPlatformFeePercent(store: RestaurantPaymentRow | null) {
+  const feeFromDatabase = safeNumber(store?.platform_fee_percent, 0);
+
+  if (feeFromDatabase > 0) {
+    return feeFromDatabase;
+  }
+
+  const planKey = safeText(store?.plan_key || store?.plan_name, 'starter').toLowerCase();
+
+  if (planKey.includes('premium') || planKey.includes('platinum')) return 5;
+  if (planKey.includes('growth')) return 7;
+
+  return 10;
+}
+
+function getApplicationFeeAmount(totalCents: number, platformFeePercent: number) {
+  const fee = Math.round(totalCents * (platformFeePercent / 100));
+  return Math.max(1, Math.min(fee, totalCents));
 }
 
 export async function POST(req: Request) {
@@ -79,6 +107,10 @@ export async function POST(req: Request) {
     const slug = safeText(body.slug, 'store');
     const orderType = safeText(body.orderType, 'pickup');
 
+    if (!restaurantId) {
+      return NextResponse.json({ error: 'Missing restaurantId' }, { status: 400 });
+    }
+
     const subtotal = safeNumber(body.subtotal);
     const deliveryFee = safeNumber(body.deliveryFee);
     const discount = safeNumber(body.discount);
@@ -92,6 +124,36 @@ export async function POST(req: Request) {
         autoRefreshToken: false,
       },
     });
+
+    const { data: restaurant, error: restaurantError } = await supabase
+      .from('restaurants')
+      .select('id, stripe_account_id, platform_fee_percent, plan_key, plan_name')
+      .eq('id', restaurantId)
+      .maybeSingle();
+
+    if (restaurantError) {
+      return NextResponse.json(
+        { error: restaurantError.message || 'Could not load restaurant payment settings' },
+        { status: 500 }
+      );
+    }
+
+    const store = restaurant as RestaurantPaymentRow | null;
+
+    if (!store?.id) {
+      return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 });
+    }
+
+    const connectedStripeAccountId = safeText(store.stripe_account_id);
+
+    if (!connectedStripeAccountId) {
+      return NextResponse.json(
+        { error: 'This store has not connected Stripe yet.' },
+        { status: 400 }
+      );
+    }
+
+    const platformFeePercent = getPlatformFeePercent(store);
 
     const origin =
       process.env.NEXT_PUBLIC_APP_URL ||
@@ -165,7 +227,7 @@ export async function POST(req: Request) {
       orderId = String(order.id);
     }
 
-    const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] =
+    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] =
       cleanedCart.map((item) => {
         const stripeImage = safeStripeImage(item.image_url);
 
@@ -187,7 +249,7 @@ export async function POST(req: Request) {
       });
 
     if (deliveryFee > 0) {
-      line_items.push({
+      lineItems.push({
         quantity: 1,
         price_data: {
           currency: 'usd',
@@ -199,17 +261,46 @@ export async function POST(req: Request) {
       });
     }
 
+    const checkoutTotalCents = lineItems.reduce((sum, item) => {
+      const quantity = Number(item.quantity || 1);
+      const unitAmount = Number(item.price_data?.unit_amount || 0);
+      return sum + quantity * unitAmount;
+    }, 0);
+
+    const applicationFeeAmount = getApplicationFeeAmount(
+      checkoutTotalCents,
+      platformFeePercent
+    );
+
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
-      line_items,
+      line_items: lineItems,
       success_url: `${origin}/store/${slug}?checkout=success${orderId ? `&order=${orderId}` : ''}`,
       cancel_url: `${origin}/store/${slug}?checkout=cancelled${orderId ? `&order=${orderId}` : ''}`,
+      payment_intent_data: {
+        application_fee_amount: applicationFeeAmount,
+        transfer_data: {
+          destination: connectedStripeAccountId,
+        },
+        metadata: {
+          order_id: orderId,
+          restaurant_id: restaurantId,
+          slug,
+          order_type: orderType,
+          platform_fee_percent: String(platformFeePercent),
+          platform_fee_amount: String(applicationFeeAmount / 100),
+          connected_account_id: connectedStripeAccountId,
+        },
+      },
       metadata: {
         order_id: orderId,
         restaurant_id: restaurantId,
         slug,
         order_type: orderType,
+        platform_fee_percent: String(platformFeePercent),
+        platform_fee_amount: String(applicationFeeAmount / 100),
+        connected_account_id: connectedStripeAccountId,
       },
     });
 
@@ -227,6 +318,9 @@ export async function POST(req: Request) {
       success: true,
       url: session.url,
       orderId,
+      platformFeePercent,
+      platformFeeAmount: applicationFeeAmount / 100,
+      connectedAccountId: connectedStripeAccountId,
     });
   } catch (error: any) {
     console.error('CHECKOUT ERROR:', error);
