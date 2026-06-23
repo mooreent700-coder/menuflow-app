@@ -392,15 +392,11 @@ function cleanSeoText(value?: string | null) {
 function titleCaseSeo(value?: string | null) {
   const clean = cleanSeoText(value);
   if (!clean) return '';
-  return clean.replace(/\w\S*/g, (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase());
-}
-
-function seoBusinessType(restaurant: RestaurantRow | null) {
-  return titleCaseSeo(restaurant?.business_type || restaurant?.category || 'Food Business');
-}
-
-function seoCategory(restaurant: RestaurantRow | null) {
-  return titleCaseSeo(restaurant?.category || restaurant?.business_type || 'Food');
+  return clean.replace(/\w\S*/g, (word) => {
+    const lower = word.toLowerCase();
+    const keepUpper = ['bbq', 'ny', 'ca', 'la'].includes(lower);
+    return keepUpper ? lower.toUpperCase() : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+  });
 }
 
 function seoCity(restaurant: RestaurantRow | null) {
@@ -415,6 +411,87 @@ function seoLocationLabel(restaurant: RestaurantRow | null) {
   const city = seoCity(restaurant);
   const state = seoState(restaurant);
   return [city, state].filter(Boolean).join(', ');
+}
+
+function normalizeSeoKeyword(value?: string | null) {
+  return cleanSeoText(value).toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+const FOOD_SEO_KEYWORDS: Array<{ keys: string[]; keyword: string; cuisine: string; schemaType?: string }> = [
+  { keys: ['seafood', 'fish', 'shrimp', 'crab', 'lobster', 'cajun seafood'], keyword: 'Seafood', cuisine: 'Seafood' },
+  { keys: ['taco', 'tacos', 'birria'], keyword: 'Tacos', cuisine: 'Mexican' },
+  { keys: ['mexican', 'burrito', 'quesadilla', 'nachos', 'tortas'], keyword: 'Mexican Food', cuisine: 'Mexican' },
+  { keys: ['burger', 'burgers', 'hamburger', 'hamburgers'], keyword: 'Burgers', cuisine: 'Burgers' },
+  { keys: ['wing', 'wings', 'chicken wings'], keyword: 'Chicken Wings', cuisine: 'Wings' },
+  { keys: ['bbq', 'barbecue', 'brisket', 'ribs'], keyword: 'BBQ', cuisine: 'BBQ' },
+  { keys: ['soul', 'soul food'], keyword: 'Soul Food', cuisine: 'Soul Food' },
+  { keys: ['caribbean', 'jerk', 'jamaican', 'oxtail'], keyword: 'Caribbean Food', cuisine: 'Caribbean' },
+  { keys: ['asian', 'chinese', 'thai', 'japanese', 'korean', 'vietnamese', 'sushi', 'pho', 'ramen'], keyword: 'Asian Food', cuisine: 'Asian' },
+  { keys: ['pizza'], keyword: 'Pizza', cuisine: 'Pizza' },
+  { keys: ['sandwich', 'sandwiches', 'subs', 'sub', 'deli'], keyword: 'Sandwiches', cuisine: 'Sandwiches' },
+  { keys: ['coffee', 'coffee shop', 'cafe', 'espresso'], keyword: 'Coffee Shop', cuisine: 'Coffee', schemaType: 'CafeOrCoffeeShop' },
+  { keys: ['smoothie', 'smoothies'], keyword: 'Smoothies', cuisine: 'Smoothies' },
+  { keys: ['juice', 'juices'], keyword: 'Juice', cuisine: 'Juice' },
+  { keys: ['dessert', 'dessert shop', 'desserts', 'cake', 'cakes', 'cookies', 'cupcakes'], keyword: 'Desserts', cuisine: 'Desserts' },
+  { keys: ['ice cream', 'icecream', 'gelato'], keyword: 'Ice Cream', cuisine: 'Ice Cream' },
+  { keys: ['bakery', 'baked goods', 'pastry', 'pastries'], keyword: 'Bakery', cuisine: 'Bakery', schemaType: 'Bakery' },
+  { keys: ['catering', 'caterer', 'caterers'], keyword: 'Catering', cuisine: 'Catering' },
+  { keys: ['food truck', 'food trucks', 'truck'], keyword: 'Food Truck', cuisine: 'Food Truck' },
+  { keys: ['pop up', 'pop-up', 'pop up shop', 'pop-up shop'], keyword: 'Pop-Up Food', cuisine: 'Food' },
+  { keys: ['restaurant'], keyword: 'Restaurant', cuisine: 'Food' },
+  { keys: ['vegan', 'plant based', 'plant-based'], keyword: 'Vegan Food', cuisine: 'Vegan' },
+  { keys: ['vegetarian'], keyword: 'Vegetarian Food', cuisine: 'Vegetarian' },
+  { keys: ['breakfast', 'brunch'], keyword: 'Breakfast', cuisine: 'Breakfast' },
+  { keys: ['hot dog', 'hot dogs', 'hotdog'], keyword: 'Hot Dogs', cuisine: 'Hot Dogs' },
+  { keys: ['pasta', 'italian'], keyword: 'Italian Food', cuisine: 'Italian' },
+  { keys: ['salad', 'salads'], keyword: 'Salads', cuisine: 'Salads' },
+  { keys: ['healthy', 'health food'], keyword: 'Healthy Food', cuisine: 'Healthy Food' },
+  { keys: ['drink', 'drinks', 'beverage', 'beverages'], keyword: 'Drinks', cuisine: 'Drinks' },
+];
+
+function seoFoodKeyword(restaurant: RestaurantRow | null) {
+  const selectedType = normalizeSeoKeyword(restaurant?.business_type || '');
+  const selectedCategory = normalizeSeoKeyword(restaurant?.category || '');
+
+  // Use the owner's selected dropdown value first. This avoids the weak "Food Near Me" fallback.
+  const primary = `${selectedType} ${selectedCategory}`.trim();
+
+  for (const item of FOOD_SEO_KEYWORDS) {
+    if (item.keys.some((key) => primary.includes(normalizeSeoKeyword(key)))) {
+      return item;
+    }
+  }
+
+  // Then check the store name/description only as backup.
+  const backup = normalizeSeoKeyword(`${restaurant?.name || ''} ${restaurant?.description || ''}`);
+  for (const item of FOOD_SEO_KEYWORDS) {
+    if (item.keys.some((key) => backup.includes(normalizeSeoKeyword(key)))) {
+      return item;
+    }
+  }
+
+  return { keys: ['restaurant'], keyword: 'Restaurant', cuisine: 'Food', schemaType: 'Restaurant' };
+}
+
+function seoBusinessType(restaurant: RestaurantRow | null) {
+  const match = seoFoodKeyword(restaurant);
+  if (match.schemaType === 'CafeOrCoffeeShop') return 'Coffee Shop';
+  if (match.schemaType === 'Bakery') return 'Bakery';
+  if (match.keyword === 'Food Truck') return 'Food Truck';
+  if (match.keyword === 'Catering') return 'Catering Service';
+  if (match.keyword === 'Desserts') return 'Dessert Shop';
+  if (match.keyword === 'Ice Cream') return 'Ice Cream Shop';
+  if (match.keyword === 'Smoothies') return 'Smoothie Shop';
+  if (match.keyword === 'Juice') return 'Juice Shop';
+  if (match.keyword === 'Coffee Shop') return 'Coffee Shop';
+  if (match.keyword === 'Sandwiches') return 'Sandwich Shop';
+  if (match.keyword === 'Restaurant') return 'Restaurant';
+  if (match.keyword === 'Pop-Up Food') return 'Pop-Up Food Shop';
+  return `${match.keyword} Restaurant`;
+}
+
+function seoCategory(restaurant: RestaurantRow | null) {
+  return seoFoodKeyword(restaurant).keyword;
 }
 
 function setOrCreateMeta(selector: string, attrName: 'name' | 'property', attrValue: string, content: string) {
@@ -444,18 +521,32 @@ function buildStoreSeo(restaurant: RestaurantRow | null, slug: string) {
   const city = seoCity(restaurant);
   const state = seoState(restaurant);
   const location = seoLocationLabel(restaurant);
+  const food = seoFoodKeyword(restaurant);
+  const keyword = food.keyword;
   const businessType = seoBusinessType(restaurant);
   const category = seoCategory(restaurant);
   const storeSlug = cleanSeoText(restaurant?.slug || slug);
   const url = `https://www.ordadirect.com/store/${storeSlug}`;
-  const title = location
-    ? `${storeName} | ${businessType} in ${location} | ORDA Direct`
-    : `${storeName} | Order Direct with ORDA Direct`;
-  const description = location
-    ? `Order directly from ${storeName} in ${location}. ${category}, pickup, delivery, menu, directions, and direct ordering through ORDA Direct.`
-    : `Order directly from ${storeName}. View the menu, pickup, delivery, directions, and direct ordering through ORDA Direct.`;
 
-  return { storeName, city, state, location, businessType, category, url, title, description };
+  const isGenericRestaurant = ['restaurant', 'food near me'].includes(keyword.toLowerCase());
+
+  const title = location
+    ? isGenericRestaurant
+      ? `${storeName} | Food Near ${location} | Restaurant Near ${location} | Order Food in ${location} | ORDA Direct`
+      : `${storeName} | ${keyword} Near ${location} | Food Near ${location} | Order Food in ${location} | ORDA Direct`
+    : isGenericRestaurant
+      ? `${storeName} | Food Near Me | Restaurant Near Me | Order Food Online | ORDA Direct`
+      : `${storeName} | ${keyword} Near Me | Food Near Me | Order Food Online | ORDA Direct`;
+
+  const description = location
+    ? isGenericRestaurant
+      ? `Order food near ${location} directly from ${storeName}. Restaurant pickup, delivery, menu, directions, and direct ordering through ORDA Direct.`
+      : `Order ${keyword.toLowerCase()} near ${location} directly from ${storeName}. Find food near ${location}, view the menu, pickup, delivery, directions, and order direct through ORDA Direct.`
+    : isGenericRestaurant
+      ? `Order food near you directly from ${storeName}. Restaurant pickup, delivery, menu, directions, and direct ordering through ORDA Direct.`
+      : `Order ${keyword.toLowerCase()} near you directly from ${storeName}. Find food near you, view the menu, pickup, delivery, directions, and order direct through ORDA Direct.`;
+
+  return { storeName, city, state, location, businessType, category, keyword, cuisine: food.cuisine, schemaType: food.schemaType || 'Restaurant', url, title, description };
 }
 
 
@@ -824,13 +915,13 @@ export default function StorefrontPage() {
   const seo = buildStoreSeo(restaurant, slug);
   const localBusinessSchema = {
     '@context': 'https://schema.org',
-    '@type': seo.businessType.toLowerCase().includes('restaurant') || seo.category.toLowerCase().includes('food') ? 'Restaurant' : 'FoodEstablishment',
+    '@type': seo.schemaType,
     name: seo.storeName,
     description: seo.description,
     url: seo.url,
     telephone: phone || undefined,
     image: heroImage || undefined,
-    servesCuisine: seo.category || undefined,
+    servesCuisine: seo.cuisine || seo.category || undefined,
     priceRange: '$$',
     address: {
       '@type': 'PostalAddress',
@@ -843,7 +934,7 @@ export default function StorefrontPage() {
     potentialAction: {
       '@type': 'OrderAction',
       target: seo.url,
-      name: `Order online from ${seo.storeName}`,
+      name: seo.location ? `Order food in ${seo.location} from ${seo.storeName}` : `Order food online from ${seo.storeName}`,
     },
   };
 
@@ -1052,7 +1143,7 @@ export default function StorefrontPage() {
     <section className="seoOnly" aria-label="Store local search information">
       <h1>{seo.title}</h1>
       <p>{seo.description}</p>
-      <p>{seo.storeName} is listed on ORDA Direct as a {seo.businessType}{seo.location ? ` in ${seo.location}` : ''}. Customers can view the menu, get directions, and order direct.</p>
+      <p>{seo.storeName} is listed on ORDA Direct for {seo.keyword}{seo.location ? ` near ${seo.location}` : ' near you'}. Customers can find food near them, view the menu, get directions, and order food direct.</p>
     </section>
     <div className="topNotice"><span>ORDA DIRECT</span><nav><button type="button" onClick={scrollToMenu}>{copy.menu}</button><button type="button" onClick={() => document.getElementById('side-promos')?.scrollIntoView({ behavior: 'smooth' })}>{copy.promos}</button><button type="button" onClick={() => document.getElementById('side-rewards')?.scrollIntoView({ behavior: 'smooth' })}>{copy.rewards}</button><button type="button" onClick={() => document.getElementById('hours')?.scrollIntoView({ behavior: 'smooth' })}>{copy.hours}</button></nav><div className="language"><button type="button" className={lang === 'en' ? 'on' : ''} onClick={() => setLang('en')}>EN</button><button type="button" className={lang === 'es' ? 'on' : ''} onClick={() => setLang('es')}>ES</button><button type="button" className="discoverBtn" onClick={() => window.location.href = '/discover'}>Discover Stores</button><button type="button" className="cartBtn" onClick={() => setCartOpen(true)}>🛒<b>{cartCount}</b></button></div></div>
 
